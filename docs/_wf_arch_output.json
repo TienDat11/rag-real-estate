@@ -1,0 +1,301 @@
+{
+ "decisions": [
+  {
+   "id": "AD-13",
+   "title": "Structured query engine — hybrid 2-tier (deterministic spec-builder ∥ controlled LlamaIndex NL2SQL)",
+   "decision": "GIỮ deterministic filter-spec builder (plan §2.7 hiện có) làm fast path cho filter phổ biến — gồm cả case affordability \"2 tỉ → căn 8 tỷ\" (WHERE required_down_payment_vnd<=2e9 trên view, không cần LLM). THÊM chân NL2SQL có kiểm soát bằng LlamaIndex cho câu builder không biểu diễn được (aggregate count/min/max/avg + GROUP BY, so sánh giá/m², so sánh policy vay). Component RAW ROWS (đúng user \"không prose\"): NLSQLRetriever(SQLDatabase(from_uri(read-only-uri), include_tables=[...], sample_rows_in_table_info=0), tables=[...], llm=OpenAILike(...), return_raw=True) + retrieve_with_metadata() → lấy metadata['result'] (raw rows) + metadata['sql_query'] bỏ thẳng vào FACT_EVIDENCE; KHÔNG qua response synthesis. Router quyết structured_path: spec|nl2sql|none trong đúng 1 call rewrite (§3.2) — mỗi query chạy 1 path, không chạy 2 SQL trùng. Guardrail deterministic: sqlglot parse reject non-SELECT top-level + write CTE + whitelist bảng + ép LIMIT cap + role read-only. Pin: llama-index-core==0.14.23 + llama-index-llms-openai-like==0.7.2 + sqlalchemy>=2,<3 + psycopg2-binary.",
+   "rationale": "User nêu hướng LlamaIndex; research xác nhận NLSQLRetriever return_raw là component đúng cho raw rows. Nhưng pure NL2SQL cho MỌI query = chậm + injection surface rộng + llama-index 0.14.x pre-1.0 dễ churn + tốn token; deterministic builder đã phủ 80% filter case (kể cả example của user). Hybrid giữ path nguy hiểm hẹp (chỉ aggregate/so sánh/phức tạp), fast path deterministic.",
+   "rejected_alternative": "(a) Pure LlamaIndex NLSQL cho mọi query — injection/latency/pre-1.0 churn trên hot path; (b) giữ nguyên chỉ builder deterministic — không biểu diễn được aggregate/compare/affordability-policy mà catalog use-case đòi.",
+   "risk": "NL2SQL prompt injection (CVE-2024-23751) — bắt buộc sqlglot validator + read-only role + sample_rows_in_table_info=0; llama-index 0.14.x API đổi giữa minor — pin chính xác + golden regression mỗi lần nâng."
+  },
+  {
+   "id": "AD-14",
+   "title": "Affordability & chính sách vay — facts mở rộng + SQL VIEW/materialized-view (derived), KHÔNG vector",
+   "decision": "Mở rộng facts: thêm policy_key TEXT NULL + campaign_key BIGINT NULL REFERENCES campaigns (gap B7), thêm finance fact keys (deposit_pct NUMERIC(5,2) điểm phần trăm, term_months NUMERIC, interest_rate_pct NUMERIC(6,4)), thêm policy_key+fact_key vào exclusion constraint facts_no_overlap để cho nhiều policy/căn, enforce unit CHECK (vnd/pct/months). Tiền = NUMERIC(20,0), % = điểm (20.00=20%), CẤM float/double. Build v_unit_offers VIEW pivot (deposit_pct/term_months/interest_rate_pct theo (subject, policy)) tính required_down_payment_vnd=ROUND(price×deposit_pct/100,0), loan_amount_vnd, monthly_principal_vnd, monthly_interest_estimate_vnd; bọc mv_unit_offers MATERIALIZED + index trên required_down_payment_vnd; REFRESH sau mỗi campaign upsert. End-to-end \"có 2 tỉ mua căn nào\": rewrite → budget param 2,000,000,000 → router spec-path → SQL mv_unit_offers WHERE required_down_payment_vnd<=2e9 → FACT_EVIDENCE rows (price, deposit_pct, required_down_payment_vnd, loan, term) → generation chỉ trích dẫn. Phân biệt NULL (thiếu fact) vs 0.00 (chính sách 0%).",
+   "rationale": "Research affordability-db xác nhận derived cross-row math KHÔNG thể là GENERATED column (EAV facts nằm row riêng) → VIEW/materialized-view là thiết kế đúng MVP; giữ giá/policy ngoài vector (đúng case trung tâm); phép toán authoritative trong SQL, không trong LLM; query affordability = filter đơn giản trên view, đủ cho fast path deterministic.",
+   "rejected_alternative": "GENERATED column (không tham chiếu được cross-row facts); tính bằng float trong app layer (sai số nhị phân, sai đồng); denormalize offers table (stale + pipeline phụ).",
+   "risk": "Quên REFRESH mv_unit_offers sau update campaign → affordability cũ trong lúc giá mới đã vào; lẫn NULL vs 0% (thiếu lãi suất vs chính sách 0%) — giữ NULL và phân biệt ở tầng hiển thị."
+  },
+  {
+   "id": "AD-15",
+   "title": "Toán học KHÔNG bao giờ do LLM generation tự tính — mọi derived value từ SQL view; generation chỉ trích dẫn",
+   "decision": "Mọi derived value (required_down_payment, loan_amount, monthly payment, thuế TNCN 2%, trước bạ 0.5%, công chứng theo bậc TT 257/2016) tính trong SQL VIEW hoặc deterministic calculator tool/function — TUYỆT ĐỐI không để generation LLM nhân/chia. Generation block chỉ tái dẫn số đã có trong FACT_EVIDENCE, không bịa công thức. L4 numeric grounding enforce: mọi số price/area/ratio/thuế trong answer phải byte-match 1 giá trị trong FACT_EVIDENCE (sau chuẩn hóa đơn vị); trượt → regenerate-1-lần rồi thay bằng citation evidence. Công thức thuế/annuity đặt trong code test được (versioned theo Nghị định), không phải trong prompt.",
+   "rationale": "Research use-cases: affordability/thuế trả góp là CALCULATOR TOOL, không phải RAG; LLM arithmetic không tin cậy. Evidence-first + grounding làm số audit được và chính xác tuyệt đối (đúng success-signal 1 của plan).",
+   "rejected_alternative": "Để answer LLM tự tính toán; để chunk văn bản mang số thay evidence (stale/poisoned — đã chặn ở placeholder).",
+   "risk": "Công thức thuế trả góp đổi khi Nghị định đổi (10/2022/NĐ-CP, TT 13/2022) → versioned formula + golden case; annuity chỉ là estimate (dư nợ gốc ban đầu) — phải dán nhãn \"ước tính\"."
+  },
+  {
+   "id": "AD-16",
+   "title": "Coverage 7 nhóm use-case chatbot tư vấn BĐS — catalog → status v1/v2/defer (không bỏ sót)",
+   "decision": "Adopt catalog 7 nhóm từ research làm baseline cầu toàn (xem coverage_matrix). v1 (10 ngày) bắt: Nhóm 1 hard filter, Nhóm 4 pháp lý giao dịch (LightRAG + facts legal_status), Nhóm 8 chất lượng VN (normalize số tiếng Việt + multi-turn rewrite + price versioning), disclaimer cơ bản. v2 thêm: Nhóm 2 aggregate/compare (NL2SQL AD-13), Nhóm 3 affordability/trả góp (AD-14 + calculator tool thuế-phí), Nhóm 6 live inventory + escalation ladder + CRM handoff, Nhóm 7 regulatory guardrails hoàn chỉnh nhận diện non-licensed assistant. DEFER kèm lý do: agent loop, booking/inventory CRM API, licensed-advisor handoff, multi-currency.",
+   "rationale": "User yêu cầu \"bắt HẾT problems\" → catalog viết ra + status ngăn bỏ sót thầm; giữ kỷ luật MVP bằng defer list có lý do. Golden set phải mã hóa case đại diện mỗi nhóm để không regress.",
+   "rejected_alternative": "Xây đủ 7 nhóm hoàn chỉnh trong 10 ngày = scope creep, vỡ lịch MVP.",
+   "risk": "Golden set thiếu case đại diện nhóm nào thì nhóm đó regress âm thầm; escalation/disclaimer phải vào template ngay từ v2, không là hậu phẩm."
+  },
+  {
+   "id": "AD-17",
+   "title": "Xung đột dependency — llama-index + lightrag-hku + PG 16.6 single-backend + VPS 4GB",
+   "decision": "Một requirements duy nhất, KHÔNG meta-package llama_index: llama-index-core==0.14.23, llama-index-llms-openai-like==0.7.2, lightrag-hku==1.5.6, pydantic>=2.8.0,<3, numpy>=1.24,<3, sqlalchemy>=2,<3, openai>=2,<3, psycopg2-binary, tiktoken>=0.7.0. Giải conflict (research đã verify): pydantic v2 thoả cả 2 (lock >=2.8.0 chặn v1 leak từ lightrag unpinned); numpy 2.x OK; sqlalchemy CHỈ llama-index dùng (lightrag qua asyncpg) → không đụng; openai 2.x thoả cả 2; tiktoken cả 2. PG 16.6 single-backend (AD-1): LightRAG (PGKV/PGVector/PGTableGraphStorage qua asyncpg) + LlamaIndex SQLAlchemy cùng trỏ 1 PG; query dùng role read-only ro_nl2sql, ingest dùng write role. VPS 4GB: sqlalchemy/psycopg2 leg nhẹ; risk RAM là LightRAG NetworkX graph — production dùng PGTableGraphStorage (không NetworkX cho ops) nên 4GB đủ; nếu áp lực → chạy NL2SQL leg là process nhẹ riêng.",
+   "rationale": "Research authenticated không xung đột cứng; pin chính xác tránh pydantic-v1 leak; giữ single-backend AD-1 (không vector DB riêng).",
+   "rejected_alternative": "Meta-package llama_index (kéo dependency thừa, tăng xung đột); chạy DB vector riêng (phá AD-1); loại bỏ LlamaIndex (mất khả năng aggregate).",
+   "risk": "llama-index 0.14.x churn giữa minor; RAM 4GB nếu graph-in-RAM + LLM cùng lúc — monitor + sẵn đường tách process; openai client version tương thích cần kiểm runtime."
+  }
+ ],
+ "coverage_matrix": [
+  {
+   "problem": "Hard numeric/categorical filter (giá ≤ budget, diện tích ≥ x, số phòng, hướng)",
+   "status": "v1 bắt",
+   "resolution": "AD-13 spec-builder §2.7/§3.4 + field allowlist; tiền/giá ngoài vector"
+  },
+  {
+   "problem": "Affordability \"có 2 tỉ mua căn nào\" (down-payment math)",
+   "status": "v2 thêm",
+   "resolution": "AD-14 mv_unit_offers WHERE required_down_payment_vnd<=budget; FACT_EVIDENCE"
+  },
+  {
+   "problem": "Post-filter recall cliff (vector-first + filter mạnh → 0 kết quả)",
+   "status": "v1 bắt",
+   "resolution": "SQL leg độc lập với RAG; SQL trả rows trực tiếp, không TOP_N chẹt (AD-13 §3.4)"
+  },
+  {
+   "problem": "Aggregate/compare (count dưới 2 tỷ, AVG giá/m² theo dự án)",
+   "status": "v2 thêm",
+   "resolution": "AD-13 nl2sql path (NLSQLRetriever return_raw) cho GROUP BY/aggregate"
+  },
+  {
+   "problem": "So sánh giá/m² ≤7 dự án (chart)",
+   "status": "defer",
+   "resolution": "NL2SQL aggregate có; chart UI defer post-MVP (success qua data, không UI)"
+  },
+  {
+   "problem": "Trả góp/mortgage payment policy (deposit % + term + interest)",
+   "status": "v2 thêm",
+   "resolution": "AD-14 finance facts + v_unit_offers; đợt hiệu lực qua campaign_key"
+  },
+  {
+   "problem": "Calculator thuế phí VN (TNCN 2%, trước bạ 0.5%, công chứng theo bậc)",
+   "status": "v2 thêm",
+   "resolution": "AD-15 calculator tool/function versioned; answer chỉ trích dẫn kết quả"
+  },
+  {
+   "problem": "Affordability stress-test (GDS/TDS/DTI)",
+   "status": "defer",
+   "resolution": "Calculator tool bản rộng sau MVP; MVP chỉ down-payment + monthly estimate"
+  },
+  {
+   "problem": "Pháp lý thế chấp/cầm cố/đất cầm (2 nghĩa đối lập)",
+   "status": "v1 bắt",
+   "resolution": "Taxonomy T1-T4 + facts legal_status + cảnh báo rủi ro edge-24 §3.5"
+  },
+  {
+   "problem": "Ra sổ hồng 50 ngày (Luật KDBĐS Điều 17)",
+   "status": "v1 bắt",
+   "resolution": "Legal LightRAG leg §3.3 + citation grounding"
+  },
+  {
+   "problem": "Quy hoạch treo chặn cấp sổ (Luật Đất đai Điều 137-138)",
+   "status": "v1 bắt",
+   "resolution": "Legal RAG + facts legal_status; high-stakes → human review §3.7"
+  },
+  {
+   "problem": "Đặt cọc/mất cọc khi chưa công chứng được",
+   "status": "v1 bắt",
+   "resolution": "Legal RAG; high-stakes keyword → confidence ceiling + review §3.7"
+  },
+  {
+   "problem": "Tồn kho live (còn/hết/đã cọc/booking)",
+   "status": "defer",
+   "resolution": "Cần inventory/CRM API read-live; phase 2 — KHÔNG trả lời từ index cũ (đã ghi non-goal)"
+  },
+  {
+   "problem": "Oversell/double-booking",
+   "status": "defer",
+   "resolution": "Như inventory live; phase 2"
+  },
+  {
+   "problem": "Escalation ladder 4 làn + reason codes + CRM evidence",
+   "status": "v2 thêm",
+   "resolution": "AD-16 coverage: cờ requires_review + handoff sales trong template; ladder đầy đủ phase 2"
+  },
+  {
+   "problem": "Disclaimer non-licensed assistant (không định giá/đàm phán/tư vấn pháp lý)",
+   "status": "v2 thêm",
+   "resolution": "AD-16 response template bắt buộc; company chịu trách nhiệm output"
+  },
+  {
+   "problem": "Regulatory guardrails (DRE/BCFSA-style)",
+   "status": "defer",
+   "resolution": "Policy production phase 2; disclaimer + human review có ngay từ v2"
+  },
+  {
+   "problem": "Normalize số tiếng Việt đa định dạng (2,85 tỷ / 500tr / 2.500.000.000 / một tỷ hai)",
+   "status": "v1 bắt",
+   "resolution": "§2.2 normalize + few-shot §3.2; thư viện đọc số VN làm fallback"
+  },
+  {
+   "problem": "Multi-turn rewrite self-contained (căn đó tầng mấy?)",
+   "status": "v1 bắt",
+   "resolution": "§3.6 rewrite resolve subject từ history trước khi route"
+  },
+  {
+   "problem": "Price/campaign freshness (bảng giá đợt mới thắng cũ)",
+   "status": "v1 bắt",
+   "resolution": "Interval effective + campaigns + mv REFRESH AD-14; test freshness eval §9"
+  },
+  {
+   "problem": "\"giá liên hệ\" chỉ có qua sales → fallback",
+   "status": "v2 thêm",
+   "resolution": "AD-16: spec value null/giá-liên-hệ → chuyển sales, không bịa giá"
+  },
+  {
+   "problem": "Refusal khi 0 dữ liệu (chưa có vs chưa nạp)",
+   "status": "v1 bắt",
+   "resolution": "§3.5/−edge-4 refusal chuẩn + dẫn bảng giá hiện hành"
+  },
+  {
+   "problem": "As-of history query (giá đợt trước?)",
+   "status": "v1 bắt",
+   "resolution": "as_of param §3.2 + B8 post-filter parametrize as_of; disclosure bản hiện tại"
+  },
+  {
+   "problem": "Range/approx giá (từ 2-3 tỷ, khoảng 85m²)",
+   "status": "v1 bắt",
+   "resolution": "quality range/approx + match_semantics A8 §3.4.1 + disclosure khoảng"
+  },
+  {
+   "problem": "Categorical alias (sổ đỏ/sổ hồng/GCN → so_hong)",
+   "status": "v1 bắt",
+   "resolution": "fact_aliases §2.2; alias lạ → giữ raw + low-conf, không tự ánh xạ"
+  },
+  {
+   "problem": "Query compound (giá + pháp lý) — 2 chân song song",
+   "status": "v1 bắt",
+   "resolution": "§3.3∥§3.4 asyncio.gather + merge §3.5 luật ưu tiên evidence"
+  },
+  {
+   "problem": "Prompt injection text-to-SQL (CVE-2024-23751)",
+   "status": "v2 thêm hardening",
+   "resolution": "AD-13 sqlglot validator + read-only role + sample_rows=0 + LIMIT cap"
+  },
+  {
+   "problem": "Rerank đẩy chunk 'nghe hay' lấn evidence đúng",
+   "status": "v1 bắt",
+   "resolution": "Rerank CHỈ chân RAG; evidence SQL block riêng không rerank §3.5/conflict-3"
+  },
+  {
+   "problem": "Graph poisoning số liệu (entity mang số cũ)",
+   "status": "v1 bắt",
+   "resolution": "Placeholder trước EXTRACT + prompt EXTRACT không đưa số volatile §2.2/conflict-5"
+  },
+  {
+   "problem": "ACL/RLS facts (doc restricted rò fact)",
+   "status": "v2 thêm",
+   "resolution": "A4 ENABLE+FORCE RLS facts/fact_subjects/campaigns; policy ∃doc published"
+  },
+  {
+   "problem": "Numeric grounding (số bịa)",
+   "status": "v1 bắt",
+   "resolution": "L4 numeric grounding §3.7 + numeric exact-match eval §9"
+  },
+  {
+   "problem": "Confidence 3-tier + human review high-stakes",
+   "status": "v1 bắt",
+   "resolution": "§3.7 + requires_review; queue UI defer"
+  },
+  {
+   "problem": "Audit replayable (NL→SQL→rows→answer)",
+   "status": "v1 bắt",
+   "resolution": "§3.8/AD-10; thêm sql_spec + fact_ids; redaction PII"
+  },
+  {
+   "problem": "Update tax formula khi Nghị định đổi",
+   "status": "v2 thêm",
+   "resolution": "AD-15 formula versioned trong code + golden case, không trong prompt"
+  }
+ ],
+ "plan_patches": [
+  "A1+A11: §2.2/Ngày3-4 — pre-chunk Điều/Khoản thành element riêng, ainsert dùng chunking_func identity (KHÔNG để Fix-chunk cắt), hard cap mỗi pre-chunk ≤ min(1200, embedding max_token), Điều dài tách theo Khoản, verify placeholder-integrity regex (⟦FACT thiếu ⟧ = fail).",
+  "A2: §2.2/Ngày3-4 — ainsert(input=[...], ids=[chunk_id], file_paths=[doc_id]) 1:1; thêm documents.lightrag_doc_id; chân RAG đọc raw_data.chunks (không ghép context string); verify id khớp Day 3-4.",
+  "A3: §3.3 — QueryParam set đủ 3: max_entity_tokens=2000, max_relation_tokens=2000, max_total_tokens=6000 cho chân RAG; 8-12k = TỔNG generation (RAG_CONTEXT+FACT_EVIDENCE+system+user).",
+  "A4: §2.3/AD-4 — ENABLE+FORCE RLS facts/fact_subjects/campaigns; policy SELECT USING (EXISTS doc published), per-command INSERT/UPDATE WITH CHECK, DELETE USING; fail-closed thiếu identity.",
+  "A5: §3.4 — validate closed-set TRƯỚC build: subject_type ∈ CHECK, dir map dict {\"asc\":\"ASC\",\"desc\":\"DESC\"} (không concat raw), order_by.field ∈ allowlist, limit ∈ [1,20] default 10.",
+  "A6: §2.2/Ngày3-4 — 1 thứ tự ingest: documents → fact_subjects → document_chunks (chunk_id deterministic, ON CONFLICT idempotent) → facts → chunk_fact_refs → campaigns → COMMIT; LightRAG ainsert CHẠY SAU COMMIT (pool riêng), retry idempotent + ingest_log.",
+  "A7: §2.5/edge-18 — chọn hard-delete 1 transaction + rowcount assert (DELETE facts→chunks→documents→adelete_by_doc_id); campaigns.source_doc_id fail-loud (chặn xóa doc có campaign active).",
+  "A8: §3.4.1 — match_semantics(op, fact) có unit test: <= match nếu range_min≤value, >= nếu range_max≥value, between=interval overlap, in chỉ categorical; FACT_EVIDENCE kèm quality+range+disclosure.",
+  "A9: §3.4/AD-4 — MVP single-tenant: policy query-time STATIC status='published'+interval (không phụ thuộc app.user_id); SET LOCAL = defensive; helper with_rls_identity() chung SQL leg+hydrate+post-filter, fail LOUD cờ acl_degraded, không 0 rows âm thầm.",
+  "A10: Ngày3-4 — smoke 8-12 văn bản cụ thể từ taxonomy T4 (31/2024/QH15, 29/2023/QH15, 91/2015/QH13 trích Điều 309-321/328, 27/2023/QH15, NĐ 101/2024, NĐ 96/2024, NĐ 99/2022, TT 04/2024/TT-BXD + 1 bảng giá mẫu); 50-100 = stretch gated data-contract §4; parser giữ 1 engine Docling, MinerU fallback scan xấu.",
+  "A12: §5/Ngày1 — chain EMBEDDING_BINDING=dashscope|aibox|local (DashScope→api-box→local Qwen3 dims 1024); RERANK_BINDING=null + min_rerank_score=0.0 khi fail; endpoint per-provider DashScope /v1/reranks vs api-box /v1/rerank + RERANK_BINDING=cohere.",
+  "A13: Ngày3-4 — scripts/verify_ingest.sql: authoritative=resolve placeholder (subject_key,fact_key) sang fact tồn tại (KHÔNG lọc hiệu lực — expire=cảnh báo không fail) regexp_matches + NOT EXISTS → dangling=0; check placeholder không ref; check graph nodes không chứa số giá.",
+  "B1: Ngày9-10 + §3.6 — thêm task web/ chat 1 trang; API contract {query, session_id, as_of?}→{answer, sources[], facts[], confidence, requires_review, trace_id, latency_ms} + 4 SSE events (sources→token→done, done kể cả sau error).",
+  "B2: Ngày1 — env contract POSTGRES_HOST/PORT/USER/PASSWORD/DATABASE/MAX_CONNECTIONS + POSTGRES_VECTOR_INDEX_TYPE=HNSW + POSTGRES_HNSW_M/EF; CREATE DATABASE explicit (LightRAG tạo bảng KHÔNG tạo DB).",
+  "B3: §2.3 — thêm cột document_chunks.text_hash (SHA-256) để AD-7 re-embed chỉ chunk đổi.",
+  "B4: §2.1 — facts.effective_from/to kế thừa documents/campaign interval; LLM interval riêng phải validate nằm trong interval doc.",
+  "B5: §3.3 — chốt rerank 1 nơi: bỏ enable_rerank internal LightRAG, dùng qwen3-rerank app-side sau post-filter; score đó là nguồn confidence.",
+  "B6: §2.2 — kind='project' add nhánh ingest: prose→NORM, structured fields (total_units, amenities, legal_status)→facts.",
+  "B7: §2.3 — thêm facts.campaign_key BIGINT NULL REFERENCES campaigns (giá bắt buộc gán campaign) — lien kết FACT_EVIDENCE với campaign.",
+  "B8: §3.3 — post-filter RAG leg tham số hóa as_of (câu hỏi lịch sử không mất context quá khứ).",
+  "AD-13: §2.7 sửa từ 'KHÔNG Text2SQL' thành 'KHÔNG Text2SQL TỰ DO; NL2SQL CÓ KIỂM SOÁT = NLSQLRetriever return_raw + read-only role ro_nl2sql + sqlglot validator + sample_rows=0 + LIMIT cap'; §3.2 thêm structured_path spec|nl2sql|none; §3.4 thêm path nl2sql song song; §6 add conflict dòng llama-index.",
+  "AD-14: §2.3 thêm policy_key/campaign_key + finance facts + policy vào exclusion constraint; §2.6 mới v_unit_offers/mv_unit_offers + index required_down_payment_vnd + REFRESH sau campaign upsert; §2.5 bảng update thêm dòng 'policy vay đổi'.",
+  "AD-15: §3.5/§3.7 — hệ điều hành rule 'mọi derived value từ SQL view/calculator tool, LLM generation CHỈ trích dẫn'; L4 numeric grounding enforce mọi số tài chính byte-match FACT_EVIDENCE; công thức thuế/annuity versioned trong code.",
+  "AD-16: §mới Coverage 7 nhóm use-case (bảng status v1/v2/defer) + section disclaimer/escalation/fallback-sales bắt buộc v2; golden set mở rộng case số-liệu-filter, tính thuế 3 tỷ, trả góp, pháp lý, escalation.",
+  "AD-17: §6 conflict check — bảng pin requirements (llama-index-core==0.14.23, llama-index-llms-openai-like==0.7.2, pydantic>=2.8,<3, numpy>=1.24,<3, sqlalchemy>=2,<3, openai>=2,<3, psycopg2-binary) + single-backend PG 16.6 qua 2 role + VPS 4GB (PGTableGraphStorage không NetworkX) + đường tách NL2SQL process nếu ép RAM."
+ ],
+ "open_risks": [
+  "llama-index 0.14.x pre-1.0 API churn (class/param đổi giữa minor — đã thấy SQLQueryEngine→NLSQLTableQueryEngine) — pin chính xác + golden regression mỗi lần nâng.",
+  "pydantic v1 leak nếu lightrag unpinned kéo về v1 → llama-index (>=2.8.0) vỡ — lock pydantic>=2.8.0,<3 ngay từ đầu.",
+  "NL2SQL prompt injection (CVE-2024-23751 class) — sqlglot validator + read-only role ro_nl2sql + sample_rows_in_table_info=0 là BẮT BUỘC, không chỉ dựa prompt guard.",
+  "sample_rows_in_table_info=3 mặc định rò dữ liệu thật vào prompt LLM — set=0 hoặc dùng view che cột nhạy cảm.",
+  "VPS 4GB áp lực RAM khi LightRAG graph + LlamaIndex + PG cùng box — production dùng PGTableGraphStorage (không NetworkX ops) giữ được; monitor + sẵn đường tách NL2SQL process riêng.",
+  "Quên REFRESH mv_unit_offers sau campaign update → affordability stale trong lúc giá mới đã vào — đưa REFRESH vào update_price.sh + golden freshness case.",
+  "High-stakes pháp lý hallucination ~1/6 — confidence ceiling + requires_review + human review là bắt buộc, không phải tùy chọn (đã có AD-001).",
+  "Price/campaign stale (đợt cũ hiện ra sau đợt mới) → tranh chấp đặt cọc — effective_date versioning + mv REFRESH + fallback sales 'giá liên hệ'."
+ ],
+ "affordability": {
+  "findings": [
+   "(1) Kiểu số: VND là đơn vị KHÔNG có hàng thấp phân → lưu NUMERIC(20,0) (nguyên, chịu tới 10^20, dư sức cho giá tỷ đồng); % lưu theo 'điểm phần trăm' NUMERIC(5,2) (20.00 = 20%), lãi suất %/năm NUMERIC(6,4) (8.5000 = 8.5%/năm) — KHÔNG lưu dạng tỉ lệ 0.20 kẻo sau này nhầm hệ số 100×. Cấm double precision/REAL cho tiền và %: float nhị phân không biểu diễn chính xác 20.00 hay 33.33 và lỗi tích lũy qua phép chia/tháng khiến tiền lệch đồng. Số trung gian tính scale cao rồi ROUND(...,0) mới cast về NUMERIC(20,0); 'phần còn lại %' = 100 - deposit_pct tính trong view, KHÔNG lưu riêng (DRY, tránh 2 nguồn sự thật).",
+   "Unit convention: thống nhất unit viết thường 'vnd' | 'pct' | 'months' (bám plan §2.3, không dùng '%'), và CHECK constraint giữ tính hợp lệ theo fact_key: chk_fact_pct (0..100), chk_fact_vnd (> 0), chk_fact_months (> 0); deposit_pct = 0.00 là chính sách hợp lệ (0% trả trước) nên phải >= 0 chứ không phải > 0.",
+   "(2) GENERATED column vs VIEW: GENERATED column (STORED) CHỈ được tham chiếu các cột trong CÙNG một row của CÙNG một bảng — không join, không aggregate, không đọc row khác → price_vnd × deposit_pct nằm ở 2 row facts riêng (EAV) nên KHÔNG THỂ là generated column trên bảng facts. Muốn dùng generated column thì phải denormalize thành 1 bảng offers (1 row = 1 offer) — mà việc pivot EAV → offers đó chính là cái VIEW đang làm. Kết luận: VIEW là thiết kế đúng cho MVP: tự sinh 1 row/policy, xử lý fact thiếu bằng LEFT JOIN → NULL, luôn fresh (không stale storage), và quy mô hàng nghìn căn thì seq scan chấp nhận được.",
+   "(3) VIEW mẫu (PG 16) — v_unit_offers pivot 4 fact rows (price_vnd + deposit_pct + term_months + interest_rate_pct) theo (subject_id, policy_key), lọc 'đang hiệu lực' theo ngày, NULLIF term_months chống chia-0, lãi tính trên dư nợ gốc ban đầu (approximation, ghi rõ):\nCREATE OR REPLACE VIEW v_unit_offers AS\nWITH cur AS (\n  SELECT subject_id, policy_key, fact_key, value_num\n  FROM facts\n  WHERE effective_from <= CURRENT_DATE\n    AND (effective_to IS NULL OR effective_to > CURRENT_DATE)\n    AND quality = 'exact')\nSELECT pol.subject_id, pol.policy_key,\n  price.value_num::NUMERIC(20,0)                                 AS price_vnd,\n  dep.value_num::NUMERIC(5,2)                                    AS deposit_pct,\n  term.value_num::INTEGER                                        AS term_months,\n  int_pct.value_num::NUMERIC(6,4)                                AS interest_rate_pct, -- %/nam; NULL = chua co thong tin\n  ROUND(price.value_num * dep.value_num / 100.0, 0)::NUMERIC(20,0)                    AS required_down_payment_vnd,\n  ROUND(price.value_num * (100.0 - dep.value_num) / 100.0, 0)::NUMERIC(20,0)          AS loan_amount_vnd,\n  ROUND((price.value_num * (100.0 - dep.value_num) / 100.0) / NULLIF(term.value_num,0), 0)::NUMERIC(20,0) AS monthly_principal_vnd,\n  ROUND((price.value_num * (100.0 - dep.value_num) / 100.0) * int_pct.value_num / 100.0 / 12.0, 0)::NUMERIC(20,0) AS monthly_interest_estimate_vnd\nFROM (SELECT DISTINCT subject_id, policy_key FROM cur WHERE policy_key IS NOT NULL) pol\nJOIN cur dep  ON dep.subject_id = pol.subject_id AND dep.policy_key = pol.policy_key AND dep.fact_key = 'deposit_pct'\nJOIN cur term ON term.subject_id = pol.subject_id AND term.policy_key = pol.policy_key AND term.fact_key = 'term_months'\nLEFT JOIN cur int_pct ON int_pct.subject_id = pol.subject_id AND int_pct.policy_key = pol.policy_key AND int_pct.fact_key = 'interest_rate_pct'\nJOIN cur price ON price.subject_id = pol.subject_id AND price.fact_key = 'price_vnd';",
+   "(4) Index: expression index KHÔNG làm được vì bắt buộc nằm trên 1 row 1 bảng, còn required_down_payment_vnd = price × deposit/100 thuộc 2 row facts khác nhau → KHÔNG thể tạo index biểu thức trên bảng facts. Index join nền: CREATE INDEX idx_facts_lookup ON facts (subject_id, fact_key, policy_key) WHERE effective_to IS NULL; CREATE INDEX idx_facts_value ON facts (fact_key, value_num). Query WHERE required_down_payment_vnd <= :budget chạy nhanh bằng MATERIALIZED VIEW + index trên chính cột tính toán:\nCREATE MATERIALIZED VIEW mv_unit_offers AS SELECT * FROM v_unit_offers;\nCREATE UNIQUE INDEX uq_mv_offers ON mv_unit_offers (subject_id, policy_key);\nCREATE INDEX idx_mv_offers_down_payment ON mv_unit_offers (required_down_payment_vnd);\nREFRESH MATERIALIZED VIEW mv_unit_offers; -- sau moi dot upsert facts",
+   "(5) Versioning/validity: policy đổi theo campaign → mỗi bản policy là row facts mới với effective_from mới, KHÔNG UPDATE giá trị cũ (bất biến, audit); đóng bản cũ bằng set effective_to. Chặn 2 phiên bản trùng khoảng bằng exclusion constraint (bật btree_gist) — PHẢI đưa policy_key vào khóa để cho phép nhiều policy khác nhau cùng khoảng trên cùng subject:\nCREATE EXTENSION IF NOT EXISTS btree_gist;\nALTER TABLE facts ADD CONSTRAINT facts_no_overlap\n  EXCLUDE USING gist (subject_id WITH =, fact_key WITH =, COALESCE(policy_key,'') WITH =,\n    daterange(effective_from, COALESCE(effective_to,'infinity'::date), '[)') WITH &&);\nMốc daterange '[)' nghĩa effective_to là ngày exclusive → filter đang hiệu lực phải dùng effective_to > CURRENT_DATE (không phải >=). View dùng CURRENT_DATE; khi cần hỏi 'tại thời điểm as_of' → bọc thành hàm/parameterized query thay vì view cố định.",
+   "(6) Edge case: căn KHÔNG có policy (thiếu deposit_pct/term_months) → mặc định KHÔNG xuất hiện trong v_unit_offers (inner join policy ≡ 'không có offer vay'); nếu nghiệp vụ muốn hiện như 'mua 100% tiền mặt' → variant LEFT JOIN + COALESCE(deposit_pct, 0) ⇒ required_down_payment = full price, loan = 0 (xem SQL ở recommendations). Nhiều policy cùng căn (ngân hàng A vs B) → view tự sinh 1 row/policy nhờ policy_key trong khóa facts + join, mỗi row là một offer độc lập để user so sánh. interest_rate_pct: NULL (thiếu fact) GIỮ NULL cho UI hiện 'chưa có lãi suất', còn 0.00 là chính sách 0% — KHÔNG COALESCE chung 2 trường hợp. Thêm policy_key vào exclusion constraint của plan hiện tại (plan §2.3 chưa có cột này) là thay đổi bắt buộc.",
+   "(7) Rủi ro làm tròn/hiển thị: NUMERIC(20,0) tự làm tròn về nguyên khi gán → mọi phép toán phải ROUND(...,0) chủ động rồi mới cast, và cân nhắc CEIL cho required_down_payment (không bao giờ ước thấp hơn thực tế khi so budget). UI không tính lại bằng float JS: nhận số nguyên từ SQL, format bằng Intl.NumberFormat('vi-VN', {style:'currency', currency:'VND'}) để có phân tách nghìn, tuyệt đối không hiện số lẻ. Lãi suất tính trên dư nợ GỐC ban đầu là approximation thổi phồng tiền lãi thật (nhất là vay dài hạn) → chỉ dùng làm bộ lọc affordability, không phải lịch trả nợ; chi tiết trả nợ đúng annuity để ở API/UI."
+  ],
+  "recommendations": [
+   "(A) DDL chạy được PG 16 — facts mở rộng policy (bám plan §2.3, sửa thẳng vì chưa có dữ liệu thật):\nCREATE TABLE fact_subjects (id BIGSERIAL PRIMARY KEY, subject_key TEXT NOT NULL UNIQUE, kind TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now());\nCREATE TABLE facts (\n  id BIGSERIAL PRIMARY KEY,\n  subject_id BIGINT NOT NULL REFERENCES fact_subjects(id) ON DELETE CASCADE,\n  campaign_key TEXT, policy_key TEXT, fact_key TEXT NOT NULL,\n  value_num NUMERIC, value_text TEXT,\n  unit TEXT NOT NULL CHECK (unit IN ('vnd','m2','pct','months','days','enum')),\n  quality TEXT NOT NULL DEFAULT 'exact' CHECK (quality IN ('exact','range','approx')),\n  range_min NUMERIC, range_max NUMERIC, volatile BOOLEAN NOT NULL DEFAULT true,\n  effective_from DATE NOT NULL, effective_to DATE,\n  source_doc_id TEXT NOT NULL REFERENCES documents(doc_id),\n  source_chunk_id TEXT REFERENCES document_chunks(chunk_id),\n  extract_conf REAL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());\nALTER TABLE facts ADD CONSTRAINT chk_fact_pct CHECK (unit <> 'pct' OR value_num IS NULL OR (value_num >= 0 AND value_num <= 100));\nALTER TABLE facts ADD CONSTRAINT chk_fact_vnd CHECK (unit <> 'vnd' OR value_num IS NULL OR value_num > 0);\nALTER TABLE facts ADD CONSTRAINT chk_fact_months CHECK (unit <> 'months' OR value_num IS NULL OR value_num > 0);\n-- + facts_no_overlap (mục 5 ở findings) + index idx_facts_lookup/idx_facts_value (mục 4)",
+   "(B) Seed 3 căn mẫu (1 căn 2 policy ngân hàng, 1 căn policy 0% hỗ trợ, 1 căn không policy) — bấm đúng chuẩn unit/value để kiểm chứng view:\nINSERT INTO fact_subjects (id, subject_key, kind) VALUES (1,'unit:A10-01','unit'),(2,'unit:A10-02','unit'),(3,'unit:C01','unit');\nINSERT INTO facts (subject_id, campaign_key, policy_key, fact_key, value_num, unit, effective_from, effective_to, source_doc_id, extract_conf) VALUES\n(1,'camp-2026q3',NULL,'price_vnd',2400000000,'vnd','2026-03-01',NULL,'price-tower-a-2026q3',0.99),\n(1,'camp-2026q3','bank_a','deposit_pct',20.00,'pct','2026-03-01',NULL,'policy-bank-a-2026',0.95),\n(1,'camp-2026q3','bank_a','term_months',240,'months','2026-03-01',NULL,'policy-bank-a-2026',0.95),\n(1,'camp-2026q3','bank_a','interest_rate_pct',8.50,'pct','2026-03-01',NULL,'policy-bank-a-2026',0.95),\n(1,'camp-2026q3','bank_b','deposit_pct',30.00,'pct','2026-03-01',NULL,'policy-bank-b-2026',0.95),\n(1,'camp-2026q3','bank_b','term_months',180,'months','2026-03-01',NULL,'policy-bank-b-2026',0.95),\n(1,'camp-2026q3','bank_b','interest_rate_pct',7.80,'pct','2026-03-01',NULL,'policy-bank-b-2026',0.95),\n(2,'camp-2026q3',NULL,'price_vnd',1500000000,'vnd','2026-03-01',NULL,'price-tower-a-2026q3',0.99),\n(2,'camp-2026q3','support','deposit_pct',0.00,'pct','2026-03-01',NULL,'policy-support-2026',0.95),\n(2,'camp-2026q3','support','term_months',120,'months','2026-03-01',NULL,'policy-support-2026',0.95),\n(2,'camp-2026q3','support','interest_rate_pct',0.00,'pct','2026-03-01',NULL,'policy-support-2026',0.95),\n(3,'camp-2026q3',NULL,'price_vnd',900000000,'vnd','2026-03-01',NULL,'price-tower-a-2026q3',0.99);",
+   "(C) Query 'có 500 triệu mua được nhà nào' (1 row = 1 offer, kèm ước tổng trả hàng tháng gốc + lãi xấp xỉ):\nSELECT subject_id, policy_key, price_vnd, deposit_pct,\n       required_down_payment_vnd, loan_amount_vnd,\n       monthly_principal_vnd,\n       COALESCE(monthly_interest_estimate_vnd, 0) AS monthly_interest_estimate_vnd,\n       monthly_principal_vnd + COALESCE(monthly_interest_estimate_vnd, 0) AS rough_monthly_payment_vnd\nFROM v_unit_offers\nWHERE required_down_payment_vnd <= 500000000\nORDER BY required_down_payment_vnd;\nKết quả mong đợi: unit A10-01 × bank_a (480tr ≤ 500tr ✓, gốc 8tr + lãi 13.6tr/tháng), A10-01 × bank_b (720tr ✗ bị loại), A10-02 × support (0tr ✓, gốc 12.5tr, lãi 0).",
+   "(D) Variant căn không policy (chọn HOẶC v_unit_offers, HOẶC view này — không dùng cả hai cùng lúc vì trùng row):\nCREATE OR REPLACE VIEW v_unit_affordability_incl_cash AS\nWITH cur AS (SELECT subject_id, fact_key, value_num FROM facts\n             WHERE effective_from <= CURRENT_DATE AND (effective_to IS NULL OR effective_to > CURRENT_DATE) AND quality = 'exact')\nSELECT price.subject_id, NULL::text AS policy_key,\n  price.value_num::NUMERIC(20,0) AS price_vnd,\n  COALESCE(dep.value_num,0)::NUMERIC(5,2) AS deposit_pct,   -- NULL -> 0% -> tra 100% gia\n  COALESCE(term.value_num,0)::INTEGER AS term_months,\n  price.value_num::NUMERIC(20,0) AS required_down_payment_vnd,\n  0::NUMERIC(20,0) AS loan_amount_vnd, 0::NUMERIC(20,0) AS monthly_principal_vnd,\n  NULL::NUMERIC(20,0) AS monthly_interest_estimate_vnd\nFROM cur price\nLEFT JOIN cur dep  ON dep.subject_id = price.subject_id  AND dep.fact_key = 'deposit_pct'\nLEFT JOIN cur term ON term.subject_id = price.subject_id AND term.fact_key = 'term_months'\nWHERE price.fact_key = 'price_vnd';",
+   "(E) Update policy/campaign 2 nhịp — đóng cũ + insert mới CÙNG 1 transaction (khoảng trống đọc, đúng nguyên tắc 'không sửa dữ liệu cũ' của plan):\nBEGIN;\nUPDATE facts SET effective_to = '2026-12-31'\nWHERE subject_id = 1 AND policy_key = 'bank_a' AND fact_key = 'deposit_pct' AND effective_from = '2026-03-01';\nINSERT INTO facts (subject_id, campaign_key, policy_key, fact_key, value_num, unit, effective_from, effective_to, source_doc_id, extract_conf)\nVALUES (1, 'camp-2027q1', 'bank_a', 'deposit_pct', 25.00, 'pct', '2027-01-01', NULL, 'price-tower-a-2027q1', 0.99);\nCOMMIT;\n-- Sau update: REFRESH MATERIALIZED VIEW mv_unit_offers; và chạy golden-set regression (theo ADR-001)."
+  ]
+ },
+ "usecases": {
+  "findings": [
+   "Nhóm 1 (truy vấn số liệu): embedding FAIL trên hard constraints — giá/ngân sách/diện tích/số phòng không phải soft signal; production dùng LLM Text2Filter (2-stage: detect thuộc tính → sinh giá trị typed theo schema) rồi chạy SQL có index trên PG, vector chỉ re-rank phần freetext trong tập đã lọc (~70% structured / 30% semantic). Dev.to (bài 'How NL Search Actually Works for Property Listings') và search-expert đều chốt: structured filter TRƯỚC, embedding SAU, không bao giờ vector-first với query nhạy giá.",
+   "Bẫy post-filtering: vector search chạy TRƯỚC WHERE → 519 căn khớp filter nhưng TOP_N=10 trả 0 kết quả; cần candidate pool 10x-20x (filter vừa) đến 100x-200x (filter mạnh) hoặc pre-filtering (Joe Sack, SQL Server 2025). AlloyDB ScaNN inline/adaptive filtering là cách production giải quyết.",
+   "Chunking listing là destructive: tách căn hộ ra nhiều chunk làm mất fact (nửa giá ở chunk A); production = 1 listing = 1 atomic chunk + regex metadata (price, bedrooms, area_sqm, property_type) + hybrid vector+FTS+RRF trong 1 SQL CTE + rerank (github ismatsamadov/real_estate_rag).",
+   "Nhóm 1 mở rộng (so sánh giá/m²): là aggregation query (GROUP BY project, MIN/AVG giá/m²) — SQL chứ không phải vector; HouseNow làm chart so sánh tối đa 7 dự án theo giá/m². Study Property Graph RAG (preprints.org) cho thấy Prompt-Refinement RAG fail dần khi số điều kiện tăng, Text_to_SQL fail khi từ khóa không khớp tên cột.",
+   "Nhóm 2 (tài chính/trả góp): chính sách bán hàng VN là structured table có hiệu lực theo đợt — Hanoi Seasons Garden: 3 phương thức (chuẩn 20%+10%+5%x8+25% theo mốc thi công / sớm 100%/30 ngày / vay 70% LS 0% + ân hạn gốc 24 tháng + miễn phí trả trước hạn); The Vista Văn La: vay 85%, HTLS 0% 24 tháng, ân hạn gốc 5 năm; The Win City (VietinBank): vay 80% 40 năm, ân hạn 36 tháng, phạt trả sớm 0.5% (năm 1-3) rồi miễn.",
+   "Nhóm 2 production: mortgage/affordability bot là CALCULATOR TOOL, không phải RAG — Ask Maya (Canada) chạy stress-test/GDS-TDS/payment math, trả ballpark, handoff licensed advisor khi cần binding pre-approval; HomeRates.ai 'not a calculator, an intelligence layer' chạy live FRED rates; Tars dẫn 2-3x completion và 35% more qualified leads. PropGenie (EACL 2026) gộp stamp duty/land tax/repayment vào 1 CalcAgent (code interpreter), RecAgent cho loan products.",
+   "Nhóm 3 (thuế phí VN): chuẩn production là công thức tính — TNCN 2% x giá chuyển nhượng (bên bán chịu), lệ phí trước bạ 0,5% x giá tính (nếu giá HĐ > giá UBND tỉnh thì 0,5% x giá HĐ; ngược lại theo bảng giá nhà nước = diện tích x giá 1m2 x % chất lượng còn lại), phí công chứng theo bậc giá trị (TT 257/2016/TT-BTC: 100tr-1 tỷ = 0,1%; 1-3 tỷ = 1tr + 0,06% phần vượt). 'Mua nhà 3 tỷ tốn bao nhiêu thuế phí' = cộng 3 công thức, phải cập nhật khi Nghị định đổi (10/2022/NĐ-CP, TT 13/2022/TT-BTC).",
+   "Nhóm 4 (pháp lý giao dịch): đang thế chấp không được bán (khoản 8 Điều 320 BLDS 2015) trừ khi ngân hàng đồng ý/giải chấp — quy trình 3 bước đặt cọc → giải chấp+xóa đăng ký → công chứng; nếu căn chưa đủ điều kiện chuyển nhượng (thế chấp, kê biên, chưa tách thửa, quy hoạch treo) mà không ký được công chứng thì ai mất cọc tùy lỗi bên nào. Ra sổ hồng: CĐT nộp hồ sơ trong 50 ngày sau bàn giao (khoản 3 Điều 17 Luật KDBĐS 2023), tổng tối đa ~73 ngày; quy hoạch treo chặn cấp sổ, được cấp khi quá 3 năm (Điều 137-138 Luật Đất đai 2024).",
+   "Nhóm 5 (vận hành sales): tình trạng căn (còn/hết/đã cọc/booking) phải đọc LIVE từ inventory/CRM — 'If the bot says a unit is available but the PMS shows it leased yesterday, you have a problem' (Attract Group); WinSell đồng bộ kho realtime chống oversell; VN stack (InCard, TaggoAI, OneBox, Golden Bee) đều có lead scoring (Tài chính/Nhu cầu/Khung thời gian mua), đặt lịch xem, ghi nhu cầu rồi handoff sales.",
+   "Nhóm 5 escalation: production pattern = escalation ladder 4 làn (self-service / assisted draft / named-owner / stop-work) + reason codes + CRM evidence fields (Ben Laube); Attract Group: transfer immediate cho high-intent ('tôi xem hôm nay'), sau baseline info cho medium, callback form cho low; Ultra Lab: không bluff, không overpromise (chỉ nói 'booked' khi có số điện thoại thật), coi endpoint như bị tấn công.",
+   "Nhóm 5 disclaimer/regulatory: AI phải tự nhận là non-licensed assistant, không được định giá/đàm phán/cho tư vấn pháp lý — Merrill RE AI Policy, Brevlo (guardrails: Fair Housing filter chạy 100%, agent veto, defer legal/financial/tax), DRE California (licensee chịu trách nhiệm mọi output AI = 'unlicensed assistant' analogy, unauthorized practice of law), BCFSA (AI thiếu licensure, phải review + disclose).",
+   "Nhóm 6 (quality VN): số tiền viết đa dạng (2.5 tỷ / 500tr / 2.500.000.000 / 'một tỷ hai') cần normalization layer về numeric — tồn tại thư viện đọc số tiếng Việt (read-vietnamese-number-js, DocTienBangChu) chứng minh độ phức tạp; chỉ ~2% tài nguyên NLP tối ưu cho tiếng Việt, corpus thiếu chuẩn hóa (maivanhai.io.vn); câu dài nhiều vế/typỏ làm vỡ intent detection (FPT.AI: giới hạn câu ~100 ký tự, xây intent taxonomy).",
+   "Nhóm 6 multi-turn: production rewrite multi-turn thành self-contained query cho RAG (PropGenie RouteAgent); Redfin: ~1/2 conversational searches chứa non-filter parameter, back-and-forth refine; QuintoAndar: LLM re-ranker dùng conversation context đạt +5.3% CTR và +4.8% scheduled visits (production A/B).",
+   "Nhóm 6 price freshness: bảng giá đổi theo từng đợt mở bán — banggiachudautu.vn quảng cáo đúng vấn đề này ('không để bạn đặt cọc rồi mới biết giá đã thay đổi'); giá nhiều dự án để 'giá liên hệ' (chỉ có qua sales). Yêu cầu versioning effective_date theo đợt + đường fallback sang human/sales.",
+   "Kết: naive-RAG (chunk + vector-topk duy nhất) fail ở cả 7 nhóm: sai số cứng (1), sai aggregation (1), không tính được toán thuế/trả góp (2,3), paraphrase pháp lý không grounded (4), dữ liệu stale (5,6), không đọc được số VN (6). Production = router intent → {SQL structured ∥ calculator tool ∥ RAG text grounded ∥ escalation} + hybrid vector/FTS/RRF + rerank + candidate pool đủ lớn."
+  ],
+  "recommendations": [
+   "Router theo intent (khớp kiến trúc SQL ∥ RAG của ADR-001): hard-constraint (giá/diện tích/số phòng/hướng/tầng) → LLM Text2Filter → SQL tham số hóa trên PG; freetext/soft (yên tĩnh, hiện đại) → vector re-rank trong tập đã lọc; tuyệt đối không vector-first với query nhạy giá, candidate pool 10x-100x.",
+   "Xây tầng Calculator Tool (pattern CalcAgent/Ask Maya): affordability (trả trước % + vay + DTI), trả góp/lịch theo đợt, thuế phí (TNCN 2%, trước bạ 0,5%, công chứng theo bậc), lãi suất — trả số tính được kèm công thức hiển thị ('show my work'), không đọc từ RAG.",
+   "Lưu chính sách bán hàng + bảng giá thành structured table có version hiệu lực (effective_date, đợt, tỷ lệ %, chiết khấu, ân hạn, phí phạt trả sớm); filter hết hiệu lực trước khi đưa LLM — đúng rule 7 của ADR-001; nếu chỉ có 'giá liên hệ' thì chuyển sales.",
+   "Xây escalation ladder 4 làn + reason codes + CRM evidence fields; auto-handoff tức thì cho: pháp lý high-stakes (thế chấp, cầm cố, quy hoạch treo, đặt cọc mất cọc), deal lớn, khiếu nại, yêu cầu binding commitment.",
+   "Disclaimer + guardrails bắt buộc: bot tự nhận là AI assistant không có giấy phép môi giới, 'không phải tư vấn pháp lý chính thức', không cam kết giá/booking/đàm phán; công ty/licensee chịu trách nhiệm output (theo DRE/BCFSA).",
+   "Normalization lớp tiếng Việt trước parser: chuẩn hóa số (tỷ/triệu/nghìn/đồng → numeric), typo/dialect, giữ context multi-turn bằng cách rewrite thành câu tự chứa đủ thông tin.",
+   "Tình trạng căn/booking: đọc live từ inventory API (status: còn/hết/đã cọc), không trả lời từ index cũ; mọi booking ghi về CRM kèm consent tracking (Zalo/Web).",
+   "Golden set mở rộng theo 7 nhóm: thêm case số-liệu-filter, tính thuế phí mẫu (3 tỷ), trả góp, pháp lý thế chấp/quy hoạch treo, escalation trigger, và case số tiền đa định dạng — chạy regression mỗi đợt cập nhật 6 tháng."
+  ]
+ }
+}
