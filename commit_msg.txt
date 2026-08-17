@@ -1,0 +1,10 @@
+feat(jina-fallback): add Jina AI free-tier fallback for LLM/embedding/rerank
+
+- Add 'jina' binding to RERANK_BINDINGS and RERANK_ENDPOINT_JINA
+- Add Jina Settings fields (embedding/rerank/llm) with defaults
+- Auto-switch to Jina credentials in dependencies.py when binding=jina
+- Accept 'jina' embedding binding in lightrag_init.py
+- Add 10 tests in test_jina_fallback.py
+- Add JINA_* env vars to .env (placeholder keys)
+
+All 184 tests pass. SSE endpoint verified with Jina fallback.
