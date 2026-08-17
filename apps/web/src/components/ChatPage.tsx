@@ -11,6 +11,7 @@ import { ThemeProvider, Disclaimer } from "@rag-ragre/ui";
 import type { FactEvidence, Source } from "@rag-ragre/contracts";
 import { streamQuery } from "@/lib/api";
 import { ASK_EVENT } from "@/lib/constants";
+import { friendlyProgressLabel } from "@/lib/progress";
 import type { ChatMessage } from "./MessageBubble";
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
@@ -54,6 +55,7 @@ function ChatCanvas() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [progressLabel, setProgressLabel] = useState("");
   const sessionIdRef = useRef<string>("");
   const [evidence, setEvidence] = useState<{ sources: Source[]; facts: FactEvidence[]; messageId?: string }>({
     sources: [],
@@ -111,6 +113,10 @@ function ChatCanvas() {
             patchMessage(assistantId, { facts });
             setEvidence((e) => ({ sources: e.sources, facts, messageId: assistantId }));
           },
+          onProgress: (step) => {
+            const label = friendlyProgressLabel(step);
+            if (label) setProgressLabel(label);
+          },
           onToken: (token) => {
             patchMessage(assistantId, (m) => ({ content: m.content + token }));
           },
@@ -123,11 +129,13 @@ function ChatCanvas() {
               latencyMs: meta.latency_ms,
             });
             setStreaming(false);
+            setProgressLabel("");
           },
           onError: (err) => {
             patchMessage(assistantId, { streaming: false, error: true, content: err.message });
             message.error(err.message);
             setStreaming(false);
+            setProgressLabel("");
             // Keep the input text so the user can retry without retyping.
             setInput(query);
           },
@@ -221,7 +229,7 @@ function ChatCanvas() {
           />
         </div>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <MessageList messages={messages} streaming={streaming} />
+          <MessageList messages={messages} streaming={streaming} progressLabel={progressLabel} />
           <div style={{ padding: "12px 16px 8px", flexShrink: 0 }}>
             <Composer
               value={input}

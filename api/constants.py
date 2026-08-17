@@ -6,7 +6,7 @@ Centralizes magic numbers/strings so provider or policy changes touch one file.
 from __future__ import annotations
 
 # --- Timeouts (seconds) ---
-DEFAULT_LLM_TIMEOUT_S = 30.0  # OpenAI client default per request
+DEFAULT_LLM_TIMEOUT_S = 60.0  # OpenAI client default per request
 DEFAULT_RERANK_TIMEOUT_S = 3.0  # HTTP rerank call budget
 LLM_CALL_TIMEOUT_S = 20.0  # per-operation LLM call budget (rewrite / nl2sql)
 
@@ -14,12 +14,13 @@ LLM_CALL_TIMEOUT_S = 20.0  # per-operation LLM call budget (rewrite / nl2sql)
 MAX_QUERY_LENGTH = 2000  # Pydantic cap on /query input
 MAX_INPUT_CHARS = 2000  # L1 rule cap on raw input
 
-# --- SSE event names (order: places -> sources -> facts -> token -> done) ---
-# error emitted before done on failure.
+# --- SSE event names (order: progress(steps) -> places -> sources -> facts -> token -> done) ---
+# progress = {"step": <name>} emitted as each pipeline stage starts; error before done on failure.
 SSE_EVENT_PLACES = "places"
 SSE_EVENT_SOURCES = "sources"
 SSE_EVENT_FACTS = "facts"
 SSE_EVENT_TOKEN = "token"
+SSE_EVENT_PROGRESS = "progress"
 SSE_EVENT_DONE = "done"
 SSE_EVENT_ERROR = "error"
 

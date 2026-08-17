@@ -2,8 +2,10 @@
 # Plan §4.2: 1 call duy nhất trả { rewritten_query, routing, sql_spec, keywords, high_stakes, as_of }
 # - Multi-turn: resolve tham chiếu từ history (≤4 turn) — query ra phải SELF-CONTAINED.
 # - Parse số tiếng Việt: "2,85 tỷ" -> 2850000000; "dưới 2 tỷ" -> <= 2000000000.
-# - structured_path ∈ {spec, nl2sql, none}; nl2sql CHỈ khi intent aggregate/compare
-#   (người máy detector deterministic xác nhận sau).
+# - structured_path ∈ {spec, nl2sql, affordability, pricing, none}; nl2sql CHỈ khi
+#   intent aggregate/compare; affordability khi query có ngân sách (định lượng >= 1M);
+#   pricing khi hỏi giá theo m2/tầng/view/mã căn KHÔNG có ngân sách (người máy
+#   detector deterministic xác nhận sau, giống nl2sql/affordability).
 
 ## Example 1 — Affordability (giá trị nhất)
 History: []
@@ -91,6 +93,24 @@ Query: "căn A10-01 vay bank nào được trả trước 25%?"
   "high_stakes": false, "as_of": null
 }
 ```
+
+## Example 6 — Pricing theo tầng / 1m² / mã căn (không ngân sách)
+History: []
+Query: "1m2 giá bao nhiêu theo tầng ở Camellia?"
+```json
+{
+  "rewritten_query": "Giá 1 mét vuông theo từng mốc tầng tại The Camellia Sơn Trà Đà Nẵng",
+  "routing": {"needs_rag": true, "needs_sql": true, "structured_path": "pricing"},
+  "sql_spec": null,
+  "hl_keywords": ["giá", "1m2", "theo tầng"], "ll_keywords": ["giá trên mét vuông", "mốc tầng"],
+  "high_stakes": false, "as_of": null
+}
+```
+
+Lưu ý: với pricing, `sql_spec` luôn là `null` — spec định lượng được xây bởi bộ
+detector deterministic (mã căn CH-xx / loại căn 1.5PN,2PN,3PN,Studio / view
+nội khu,mặt đường,góc,biển / từ khóa m2+tầng). Giá theo từng mốc tầng và
+per-m² đều từ DB (v_unit_estimates), KHÔNG do LLM tính.
 
 ## LUẬT CHƠI
 - Nếu không thể route → `structured_path: "none"`, `needs_rag: true` (fallback an toàn).

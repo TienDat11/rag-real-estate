@@ -13,6 +13,8 @@ export interface DoneMeta {
 export interface QueryStreamHandlers {
   onSources?: (sources: Source[]) => void;
   onFacts?: (facts: FactEvidence[]) => void;
+  /** Raw backend progress step key (mapped to a friendly label in the UI). */
+  onProgress?: (step: string) => void;
   onToken?: (text: string) => void;
   onDone?: (meta: DoneMeta) => void;
   onError?: (error: Error) => void;
@@ -162,6 +164,11 @@ function handleEvent(evt: RawSseEvent, handlers: QueryStreamHandlers): void {
         if (typeof text === "string") handlers.onToken?.(text);
       }
       break;
+    case API_SSE_EVENTS.PROGRESS: {
+      const step = (evt.data as { step?: string } | null)?.step;
+      if (typeof step === "string") handlers.onProgress?.(step);
+      break;
+    }
     case API_SSE_EVENTS.DONE:
       handlers.onDone?.(evt.data as DoneMeta);
       break;

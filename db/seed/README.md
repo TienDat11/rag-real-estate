@@ -11,6 +11,9 @@
 
 | File | Nội dung | Loại dữ liệu |
 |---|---|---|
+| `../camellia_estimate.sql` | Package `camellia` (project/subjects) + view `v_unit_estimates` — PHẢI chạy trước `camellia_rumor.sql` | `price` estimate |
+| `camellia_rumor.sql` | 6 unit-type subjects (attrs có `price_tiers`: t4-t10…t21-25, pct theo loại) + CH-10/CH-11 (price_note only) + 24 range price facts (6 type × chuan/htls/thanh_thoi/som95) + HTLS loan policy — nguồn số cho story 3.3 pricing tiered leg | `price` estimate |
+|---|---|---|
 | `price_campaigns.sql` | 2 campaign giá (tower-a-2026q2 active, tower-b-2026q1 expired) + 2 documents dự án (project tower-a/b) + 2 documents bảng giá (price) + fact_subjects + facts: price_vnd + area_m2 cho 29 căn + policy vay (bank_a/bank_b mỗi căn, 1 policy support 0%, 1 căn KHÔNG policy) | `price` + `project` |
 | `policy_vay.sql` | Ma trận chính sách vay chuẩn + INSERT policy facts (deposit_pct/term_months/interest_rate_pct) gắn campaign + policy_key — chạy độc lập hoặc song song `price_campaigns.sql` (an toàn: NOT EXISTS guard) | finance policy |
 | `legal_docs.sql` | 10 văn bản pháp luật T4 (registry `documents` kind=legal) | `legal` |
@@ -18,13 +21,17 @@
 ## Thứ tự nạp
 
 ```bash
-# sau khi đã áp db/schema.sql
-psql "$POSTGRES_URL" -f db/seed/legal_docs.sql
-psql "$POSTGRES_URL" -f db/seed/price_campaigns.sql
-psql "$POSTGRES_URL" -f db/seed/policy_vay.sql   # optional — đã có policy trong price_campaigns.sql
+# sau khi đã áp db/schema.sql + db/audit.sql — KHÔNG cần psql trên máy host:
+# dùng psql bên trong container postgres (chạy từ thư mục repo).
+PSQL="docker compose exec -T postgres psql -U ragre -d ragre -v ON_ERROR_STOP=1"
+$PSQL < db/camellia_estimate.sql       # bắt buộc TRƯỚC camellia_rumor.sql
+$PSQL < db/seed/camellia_rumor.sql     # story 3.3 pricing (price_tiers)
+$PSQL < db/seed/legal_docs.sql
+$PSQL < db/seed/price_campaigns.sql
+$PSQL < db/seed/policy_vay.sql   # optional — đã có policy trong price_campaigns.sql
 # verify
-psql "$POSTGRES_URL" -f scripts/verify_ingest.sql
-psql "$POSTGRES_URL" -c "SELECT subject_id, policy_key, price_vnd, deposit_pct, term_months, interest_rate_pct, required_down_payment_vnd FROM v_unit_offers WHERE subject_id = (SELECT id FROM fact_subjects WHERE subject_key='unit:tower-a/A10-01') ORDER BY policy_key;"
+$PSQL < scripts/verify_ingest.sql
+$PSQL -c "SELECT subject_id, policy_key, price_vnd, deposit_pct, term_months, interest_rate_pct, required_down_payment_vnd FROM v_unit_offers WHERE subject_id = (SELECT id FROM fact_subjects WHERE subject_key='unit:tower-a/A10-01') ORDER BY policy_key;"
 ```
 
 ## Kỷ luật kiểu số (AD-14)

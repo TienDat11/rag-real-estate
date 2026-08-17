@@ -35,6 +35,22 @@ body {
   background: transparent;
 }
 
+/* Friendly loading-progress row while the assistant prepares the answer */
+.progress-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #d5dbe6;
+  border-top-color: #1f46a8;
+  animation: progress-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Typing caret shown while the assistant streams */
 .typing-caret::after {
   content: "▍";

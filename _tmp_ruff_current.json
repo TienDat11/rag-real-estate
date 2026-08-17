@@ -1,0 +1,1879 @@
+﻿[
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 27
+    },
+    "filename": "D:\\rag-real-estate\\api\\adapters\\http_rerank.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 27
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 27,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 40
+    },
+    "filename": "D:\\rag-real-estate\\api\\adapters\\http_rerank.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 40
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 40,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 109,
+      "row": 57
+    },
+    "filename": "D:\\rag-real-estate\\api\\adapters\\http_rerank.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 57
+    },
+    "message": "Line too long (108 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 57,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 61
+    },
+    "filename": "D:\\rag-real-estate\\api\\adapters\\http_rerank.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 61
+    },
+    "message": "Line too long (104 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 61,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP035",
+    "end_location": {
+      "column": 43,
+      "row": 11
+    },
+    "filename": "D:\\rag-real-estate\\api\\adapters\\openai_compatible_llm.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from collections.abc import AsyncIterator, Sequence",
+          "end_location": {
+            "column": 43,
+            "row": 11
+          },
+          "location": {
+            "column": 1,
+            "row": 11
+          }
+        }
+      ],
+      "message": "Import from `collections.abc`"
+    },
+    "location": {
+      "column": 1,
+      "row": 11
+    },
+    "message": "Import from `collections.abc` instead: `AsyncIterator`, `Sequence`",
+    "name": "deprecated-import",
+    "noqa_row": 11,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/deprecated-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 42
+    },
+    "filename": "D:\\rag-real-estate\\api\\adapters\\openai_compatible_llm.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 42
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 42,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 107,
+      "row": 68
+    },
+    "filename": "D:\\rag-real-estate\\api\\adapters\\openai_compatible_llm.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 68
+    },
+    "message": "Line too long (106 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 68,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 75
+    },
+    "filename": "D:\\rag-real-estate\\api\\adapters\\openai_compatible_llm.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 75
+    },
+    "message": "Line too long (104 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 75,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 24,
+      "row": 15
+    },
+    "filename": "D:\\rag-real-estate\\api\\audit.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from api import sha256_hex",
+          "end_location": {
+            "column": 36,
+            "row": 15
+          },
+          "location": {
+            "column": 1,
+            "row": 15
+          }
+        }
+      ],
+      "message": "Remove unused import: `api.get_cfg`"
+    },
+    "location": {
+      "column": 17,
+      "row": 15
+    },
+    "message": "`api.get_cfg` imported but unused",
+    "name": "unused-import",
+    "noqa_row": 15,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "UP035",
+    "end_location": {
+      "column": 33,
+      "row": 12
+    },
+    "filename": "D:\\rag-real-estate\\api\\generate.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from collections.abc import AsyncIterator",
+          "end_location": {
+            "column": 33,
+            "row": 12
+          },
+          "location": {
+            "column": 1,
+            "row": 12
+          }
+        }
+      ],
+      "message": "Import from `collections.abc`"
+    },
+    "location": {
+      "column": 1,
+      "row": 12
+    },
+    "message": "Import from `collections.abc` instead: `AsyncIterator`",
+    "name": "deprecated-import",
+    "noqa_row": 12,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/deprecated-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 120,
+      "row": 41
+    },
+    "filename": "D:\\rag-real-estate\\api\\generate.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 41
+    },
+    "message": "Line too long (119 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 41,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 110,
+      "row": 64
+    },
+    "filename": "D:\\rag-real-estate\\api\\generate.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 64
+    },
+    "message": "Line too long (109 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 64,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 141,
+      "row": 28
+    },
+    "filename": "D:\\rag-real-estate\\api\\guard_input.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 28
+    },
+    "message": "Line too long (140 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 28,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 110,
+      "row": 29
+    },
+    "filename": "D:\\rag-real-estate\\api\\guard_input.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 29
+    },
+    "message": "Line too long (109 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 29,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 111,
+      "row": 108
+    },
+    "filename": "D:\\rag-real-estate\\api\\guard_input.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 108
+    },
+    "message": "Line too long (110 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 108,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 20
+    },
+    "filename": "D:\\rag-real-estate\\api\\guard_output.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 20
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 20,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 115,
+      "row": 129
+    },
+    "filename": "D:\\rag-real-estate\\api\\guard_output.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 129
+    },
+    "message": "Line too long (114 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 129,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 106,
+      "row": 133
+    },
+    "filename": "D:\\rag-real-estate\\api\\guard_output.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 133
+    },
+    "message": "Line too long (105 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 133,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 113,
+      "row": 186
+    },
+    "filename": "D:\\rag-real-estate\\api\\guard_output.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 186
+    },
+    "message": "Line too long (112 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 186,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP035",
+    "end_location": {
+      "column": 33,
+      "row": 18
+    },
+    "filename": "D:\\rag-real-estate\\api\\main.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from collections.abc import AsyncIterator",
+          "end_location": {
+            "column": 33,
+            "row": 18
+          },
+          "location": {
+            "column": 1,
+            "row": 18
+          }
+        }
+      ],
+      "message": "Import from `collections.abc`"
+    },
+    "location": {
+      "column": 1,
+      "row": 18
+    },
+    "message": "Import from `collections.abc` instead: `AsyncIterator`",
+    "name": "deprecated-import",
+    "noqa_row": 18,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/deprecated-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 107,
+      "row": 135
+    },
+    "filename": "D:\\rag-real-estate\\api\\main.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 135
+    },
+    "message": "Line too long (106 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 135,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 116,
+      "row": 187
+    },
+    "filename": "D:\\rag-real-estate\\api\\main.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 187
+    },
+    "message": "Line too long (115 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 187,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 108,
+      "row": 194
+    },
+    "filename": "D:\\rag-real-estate\\api\\main.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 194
+    },
+    "message": "Line too long (107 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 194,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 195
+    },
+    "filename": "D:\\rag-real-estate\\api\\main.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 195
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 195,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP037",
+    "end_location": {
+      "column": 87,
+      "row": 199
+    },
+    "filename": "D:\\rag-real-estate\\api\\main.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "StreamingResponse | dict",
+          "end_location": {
+            "column": 87,
+            "row": 199
+          },
+          "location": {
+            "column": 61,
+            "row": 199
+          }
+        }
+      ],
+      "message": "Remove quotes"
+    },
+    "location": {
+      "column": 61,
+      "row": 199
+    },
+    "message": "Remove quotes from type annotation",
+    "name": "quoted-annotation",
+    "noqa_row": 199,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/quoted-annotation"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 32,
+      "row": 223
+    },
+    "filename": "D:\\rag-real-estate\\api\\main.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 32,
+            "row": 223
+          },
+          "location": {
+            "column": 25,
+            "row": 223
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `exc`"
+    },
+    "location": {
+      "column": 29,
+      "row": 223
+    },
+    "message": "Local variable `exc` is assigned to but never used",
+    "name": "unused-variable",
+    "noqa_row": 223,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 120
+    },
+    "filename": "D:\\rag-real-estate\\api\\merge.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 120
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 122,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 143,
+      "row": 166
+    },
+    "filename": "D:\\rag-real-estate\\api\\merge.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 166
+    },
+    "message": "Line too long (142 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 166,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 168,
+      "row": 171
+    },
+    "filename": "D:\\rag-real-estate\\api\\merge.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 171
+    },
+    "message": "Line too long (167 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 171,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 113,
+      "row": 209
+    },
+    "filename": "D:\\rag-real-estate\\api\\merge.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 209
+    },
+    "message": "Line too long (112 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 209,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 50
+    },
+    "filename": "D:\\rag-real-estate\\api\\nl2sql_guard.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 50
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 54,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 194
+    },
+    "filename": "D:\\rag-real-estate\\api\\nl2sql_guard.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 194
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 194,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 107,
+      "row": 211
+    },
+    "filename": "D:\\rag-real-estate\\api\\nl2sql_guard.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 211
+    },
+    "message": "Line too long (106 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 211,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 152,
+      "row": 225
+    },
+    "filename": "D:\\rag-real-estate\\api\\nl2sql_guard.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 225
+    },
+    "message": "Line too long (151 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 225,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP035",
+    "end_location": {
+      "column": 72,
+      "row": 5
+    },
+    "filename": "D:\\rag-real-estate\\api\\ports\\llm.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from typing import Protocol, runtime_checkable\nfrom collections.abc import AsyncIterator, Sequence",
+          "end_location": {
+            "column": 72,
+            "row": 5
+          },
+          "location": {
+            "column": 1,
+            "row": 5
+          }
+        }
+      ],
+      "message": "Import from `collections.abc`"
+    },
+    "location": {
+      "column": 1,
+      "row": 5
+    },
+    "message": "Import from `collections.abc` instead: `AsyncIterator`, `Sequence`",
+    "name": "deprecated-import",
+    "noqa_row": 5,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/deprecated-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 106,
+      "row": 47
+    },
+    "filename": "D:\\rag-real-estate\\api\\rag_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 47
+    },
+    "message": "Line too long (105 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 47,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 112,
+      "row": 48
+    },
+    "filename": "D:\\rag-real-estate\\api\\rag_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 48
+    },
+    "message": "Line too long (111 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 48,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 49
+    },
+    "filename": "D:\\rag-real-estate\\api\\rag_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 49
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 49,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 128,
+      "row": 50
+    },
+    "filename": "D:\\rag-real-estate\\api\\rag_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 50
+    },
+    "message": "Line too long (127 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 50,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 150
+    },
+    "filename": "D:\\rag-real-estate\\api\\rag_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 150
+    },
+    "message": "Line too long (104 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 150,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 64,
+      "row": 36
+    },
+    "filename": "D:\\rag-real-estate\\api\\rewrite.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 36
+    },
+    "message": "Module level import not at top of file",
+    "name": "module-import-not-at-top-of-file",
+    "noqa_row": 36,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 91
+    },
+    "filename": "D:\\rag-real-estate\\api\\rewrite.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 91
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 91,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 108,
+      "row": 409
+    },
+    "filename": "D:\\rag-real-estate\\api\\rewrite.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 409
+    },
+    "message": "Line too long (107 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 409,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 112,
+      "row": 413
+    },
+    "filename": "D:\\rag-real-estate\\api\\rewrite.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 413
+    },
+    "message": "Line too long (111 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 413,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 168,
+      "row": 447
+    },
+    "filename": "D:\\rag-real-estate\\api\\rewrite.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 447
+    },
+    "message": "Line too long (167 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 447,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 86,
+      "row": 15
+    },
+    "filename": "D:\\rag-real-estate\\api\\route_intent.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from __future__ import annotations\n\nfrom dataclasses import dataclass\nfrom enum import Enum\n\nfrom api.rewrite import AGGREGATE_KEYWORDS, GEO_INTENT_KEYWORDS, HIGH_STAKES_KEYWORDS\n\n\n",
+          "end_location": {
+            "column": 1,
+            "row": 17
+          },
+          "location": {
+            "column": 1,
+            "row": 10
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 1,
+      "row": 10
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "name": "unsorted-imports",
+    "noqa_row": 10,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 43,
+      "row": 15
+    },
+    "filename": "D:\\rag-real-estate\\api\\route_intent.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from api.rewrite import GEO_INTENT_KEYWORDS, HIGH_STAKES_KEYWORDS",
+          "end_location": {
+            "column": 86,
+            "row": 15
+          },
+          "location": {
+            "column": 1,
+            "row": 15
+          }
+        }
+      ],
+      "message": "Remove unused import: `api.rewrite.AGGREGATE_KEYWORDS`"
+    },
+    "location": {
+      "column": 25,
+      "row": 15
+    },
+    "message": "`api.rewrite.AGGREGATE_KEYWORDS` imported but unused",
+    "name": "unused-import",
+    "noqa_row": 15,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 112,
+      "row": 58
+    },
+    "filename": "D:\\rag-real-estate\\api\\route_intent.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 58
+    },
+    "message": "Line too long (111 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 58,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP035",
+    "end_location": {
+      "column": 38,
+      "row": 18
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from typing import Any\nfrom collections.abc import AsyncIterator",
+          "end_location": {
+            "column": 38,
+            "row": 18
+          },
+          "location": {
+            "column": 1,
+            "row": 18
+          }
+        }
+      ],
+      "message": "Import from `collections.abc`"
+    },
+    "location": {
+      "column": 1,
+      "row": 18
+    },
+    "message": "Import from `collections.abc` instead: `AsyncIterator`",
+    "name": "deprecated-import",
+    "noqa_row": 18,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/deprecated-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 75
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 75
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 75,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 265
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 265
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 265,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 106,
+      "row": 385
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 385
+    },
+    "message": "Line too long (105 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 385,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 126,
+      "row": 389
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 389
+    },
+    "message": "Line too long (125 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 389,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 392
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 392
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 392,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 393
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 393
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 393,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 106,
+      "row": 421
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 421
+    },
+    "message": "Line too long (105 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 421,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 133,
+      "row": 609
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 609
+    },
+    "message": "Line too long (132 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 609,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 627
+    },
+    "filename": "D:\\rag-real-estate\\api\\sql_leg.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 627
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 627,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 108,
+      "row": 24
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 24
+    },
+    "message": "Line too long (107 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 24,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 44
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 44
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 44,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 110,
+      "row": 48
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 48
+    },
+    "message": "Line too long (109 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 48,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP037",
+    "end_location": {
+      "column": 36,
+      "row": 51
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "EvalSettings",
+          "end_location": {
+            "column": 36,
+            "row": 51
+          },
+          "location": {
+            "column": 22,
+            "row": 51
+          }
+        }
+      ],
+      "message": "Remove quotes"
+    },
+    "location": {
+      "column": 22,
+      "row": 51
+    },
+    "message": "Remove quotes from type annotation",
+    "name": "quoted-annotation",
+    "noqa_row": 51,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/quoted-annotation"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 69
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 69
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 69,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP045",
+    "end_location": {
+      "column": 74,
+      "row": 77
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "str | None",
+          "end_location": {
+            "column": 74,
+            "row": 77
+          },
+          "location": {
+            "column": 61,
+            "row": 77
+          }
+        }
+      ],
+      "message": "Convert to `X | None`"
+    },
+    "location": {
+      "column": 61,
+      "row": 77
+    },
+    "message": "Use `X | None` for type annotations",
+    "name": "non-pep604-annotation-optional",
+    "noqa_row": 77,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/non-pep604-annotation-optional"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 108,
+      "row": 77
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 77
+    },
+    "message": "Line too long (107 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 77,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 114,
+      "row": 167
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 167
+    },
+    "message": "Line too long (113 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 167,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 114,
+      "row": 188
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 188
+    },
+    "message": "Line too long (113 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 188,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 118,
+      "row": 199
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 199
+    },
+    "message": "Line too long (117 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 199,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 250
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 250
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 250,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 257
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 257
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 257,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 281
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 281
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 281,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP045",
+    "end_location": {
+      "column": 57,
+      "row": 372
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "str | None",
+          "end_location": {
+            "column": 57,
+            "row": 372
+          },
+          "location": {
+            "column": 44,
+            "row": 372
+          }
+        }
+      ],
+      "message": "Convert to `X | None`"
+    },
+    "location": {
+      "column": 44,
+      "row": 372
+    },
+    "message": "Use `X | None` for type annotations",
+    "name": "non-pep604-annotation-optional",
+    "noqa_row": 372,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/non-pep604-annotation-optional"
+  },
+  {
+    "cell": null,
+    "code": "UP045",
+    "end_location": {
+      "column": 69,
+      "row": 427
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "dict[str, Any] | None",
+          "end_location": {
+            "column": 69,
+            "row": 427
+          },
+          "location": {
+            "column": 45,
+            "row": 427
+          }
+        }
+      ],
+      "message": "Convert to `X | None`"
+    },
+    "location": {
+      "column": 45,
+      "row": 427
+    },
+    "message": "Use `X | None` for type annotations",
+    "name": "non-pep604-annotation-optional",
+    "noqa_row": 427,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/non-pep604-annotation-optional"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 110,
+      "row": 447
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 447
+    },
+    "message": "Line too long (109 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 447,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 459
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 459
+    },
+    "message": "Line too long (102 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 459,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 110,
+      "row": 529
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 529
+    },
+    "message": "Line too long (109 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 529,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 589
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 589
+    },
+    "message": "Line too long (104 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 589,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 609
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 609
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 609,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 108,
+      "row": 613
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 613
+    },
+    "message": "Line too long (107 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 613,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 106,
+      "row": 640
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 640
+    },
+    "message": "Line too long (105 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 640,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 117,
+      "row": 652
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 652
+    },
+    "message": "Line too long (116 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 652,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 682
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 682
+    },
+    "message": "Line too long (101 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 682,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 111,
+      "row": 686
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 686
+    },
+    "message": "Line too long (110 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 686,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 104,
+      "row": 756
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 756
+    },
+    "message": "Line too long (103 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 756,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 116,
+      "row": 771
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 771
+    },
+    "message": "Line too long (115 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 771,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 772
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 772
+    },
+    "message": "Line too long (104 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 772,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 113,
+      "row": 773
+    },
+    "filename": "D:\\rag-real-estate\\eval\\run_eval.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 773
+    },
+    "message": "Line too long (112 > 100)",
+    "name": "line-too-long",
+    "noqa_row": 773,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  }
+]

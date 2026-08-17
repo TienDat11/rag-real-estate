@@ -16,6 +16,7 @@ from typing import Any
 
 from api.constants import LLM_CALL_TIMEOUT_S
 from api.dependencies import llm, model_for_role
+from api.llm import LLMTimeoutError
 
 logger = logging.getLogger("api.rewrite")
 
@@ -171,6 +172,93 @@ def _has_relational_price(query: str) -> bool:
     return bool(_RELATIONAL_PRICE_RE.search(query or ""))
 
 
+# Pricing leg (story 3.3): per-m² / floor-tier / unit-code price asks. The
+# deterministic leg answers them from v_unit_estimates; the detector is the D3
+# gate (LLM proposes 'pricing', detector confirms) exactly like affordability.
+_PRICING_M2_RE = re.compile(
+    r"1s*m2|1m²|mỗis*m2|mỗis*mét|1s+méts+vuông|mộts+méts+vuông",
+    re.IGNORECASE,
+)
+_PRICING_TIER_KEYWORDS = ("theo tầng", "mốc tầng", "trên từng tầng", "các tầng")
+_UNIT_CODE_RE = re.compile(r"\bCH[- ]?\d{2,3}[A-Z]?\b", re.IGNORECASE)
+_BEDROOM_RE = re.compile(r"\b(studio|1\.5pn|1pn|2pn|3pn)\b", re.IGNORECASE)
+_VIEW_KEYWORDS = ("nội khu", "mặt đường", "góc biển", "góc núi", "góc", "biển")
+_BEDROOM_MAP = {
+    "studio": "Studio",
+    "1.5pn": "1.5PN",
+    "1pn": "1.5PN",
+    "2pn": "2PN",
+    "3pn": "3PN",
+}
+
+
+def detect_pricing_intent(query: str) -> dict | None:
+    """Pure detector: one pricing spec dict or None (D3 gate for 'pricing').
+
+    Fires only for per-m² / floor-tier / unit-code price asks with no budget
+    literal; budget, aggregate, high-stakes, and relational/compare phrasings
+    all suppress it (affordability or spec owns those, AC-6).
+    """
+    q = (query or "").lower()
+    if extract_price_intent(q) is not None:  # FIX-3 floor: a budget is not pricing
+        return None
+    if detect_aggregate_intent(q):
+        return None
+    if _has_high_stakes(q):
+        return None
+    if _has_relational_price(q):
+        return None
+    unit_code = None
+    m = _UNIT_CODE_RE.search(q)
+    if m:
+        unit_code = m.group(0).upper().replace(" ", "")
+    bedrooms = None
+    bm = _BEDROOM_RE.search(q)
+    if bm:
+        bedrooms = _BEDROOM_MAP[bm.group(1).lower()]
+    view = None
+    for v in _VIEW_KEYWORDS:
+        if v in q:
+            view = v
+            break
+    is_m2 = bool(_PRICING_M2_RE.search(q))
+    is_tier = any(k in q for k in _PRICING_TIER_KEYWORDS)
+    if not (unit_code or bedrooms or view or is_m2 or is_tier):
+        return None
+    if unit_code:
+        query_type = "unit"
+    elif is_tier:
+        query_type = "tier"
+    else:
+        query_type = "per_m2"
+    spec: dict[str, Any] = {
+        "source": "v_unit_estimates",
+        "query_type": query_type,
+        "limit": 20,
+    }
+    if unit_code:
+        spec["unit_code"] = unit_code
+    if bedrooms:
+        spec["bedrooms"] = bedrooms
+    if view:
+        spec["view"] = view
+    return spec
+
+
+def _make_pricing_spec(pricing: dict) -> dict:
+    """Normalize a detector hint into the pricing SQL spec shape."""
+    spec: dict[str, Any] = {
+        "subject_type": "unit",
+        "source": "v_unit_estimates",
+        "query_type": pricing.get("query_type", "per_m2"),
+        "limit": 20,
+    }
+    for key in ("unit_code", "bedrooms", "view"):
+        if pricing.get(key):
+            spec[key] = pricing[key]
+    return spec
+
+
 def _normalize_routed(data: dict[str, Any], query: str, as_of: str | None) -> RoutedResult:
     """Coerce and constrain the LLM routing output to a canonical shape."""
     routing_raw = data.get("routing") or {}
@@ -181,7 +269,7 @@ def _normalize_routed(data: dict[str, Any], query: str, as_of: str | None) -> Ro
     else:
         needs_rag, needs_sql, path = True, False, "none"
 
-    if path not in ("spec", "nl2sql", "affordability", "none"):
+    if path not in ("spec", "nl2sql", "affordability", "pricing", "none"):
         path = "none"
 
     needs_geo = _geo_flag(routing_raw, data, query)
@@ -252,6 +340,41 @@ def _normalize_routed(data: dict[str, Any], query: str, as_of: str | None) -> Ro
         needs_sql = True
         degraded.append("budget_injected")
         forced = True
+
+    # Pricing (story 3.3): per-m² / tier / unit-code asks with NO budget force
+    # the deterministic pricing leg — D3 pattern, same guardrails as the budget
+    # force. budget None is mandatory so affordability owns every budget
+    # collision; compound LLM specs, aggregate/high-stakes, and relational
+    # phrasings are never overridden.
+    pricing = None
+    if (
+        budget is None
+        and path not in ("nl2sql", "affordability")
+        and not aggregate
+        and not high_stakes
+        and not _has_relational_price(query)
+    ):
+        pricing = detect_pricing_intent(query)
+        if pricing is not None and (spec is None or _is_budget_only_spec(spec)):
+            spec = _make_pricing_spec(pricing)
+            path = "pricing"
+            needs_sql = True
+            degraded.append("pricing_injected")
+            forced_pricing = True
+        else:
+            forced_pricing = False
+    else:
+        forced_pricing = False
+
+    # LLM-declared 'pricing' the detector did NOT drive (no per-m²/tier/unit
+    # cue, or a compound spec it cannot honor) must not reach the deterministic
+    # leg — demote to the path the spec can serve, else RAG-only (VG-4/BH-3).
+    if not forced and not forced_pricing and path == "pricing":
+        degraded.append("pricing_unconfirmed")
+        if spec is not None:
+            path = "spec"
+        else:
+            path, needs_rag, needs_sql = "none", True, False
 
     # LLM-declared 'affordability' the deterministic detector did NOT confirm
     # (no budget >= 1M, or a compound spec the leg cannot drive) must not reach
@@ -329,6 +452,16 @@ async def rewrite_query(query: str, history: list[dict] | None, as_of: str | Non
             if not isinstance(data, dict):
                 raise ValueError("LLM trả về không phải object")
             return _normalize_routed(data, query, as_of)
+        except LLMTimeoutError:
+            # A timeout means the LLM never answered: retrying with the JSON
+            # correction prompt only wastes another LLM_CALL_TIMEOUT_S. Fall back
+            # now; the outer STEP_TIMEOUTS["rewrite"] still bounds the leg.
+            logger.warning(
+                "rewrite attempt %d timed out after %ss; falling back to rag-only",
+                i + 1,
+                int(LLM_CALL_TIMEOUT_S),
+            )
+            return fallback_route(query, as_of, reason="router_degraded: rewrite LLM timeout")
         except Exception as exc:  # noqa: BLE001 — json parse / LLM error -> retry then fallback
             logger.warning("rewrite attempt %d failed: %s", i + 1, exc)
             if i == len(attempts) - 1:

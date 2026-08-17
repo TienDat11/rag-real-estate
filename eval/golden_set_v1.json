@@ -4,7 +4,7 @@
     "corpus_version": "seed-2026-08-10",
     "as_of_default": "2026-08-10",
     "description": "Golden set tiếng Việt — eval/run_eval.py. Semantics: expected_answer_contains = ANY-of (pass nếu ít nhất 1 token xuất hiện); expected_answer_excludes = NONE may appear (freshness); expected_facts = numeric exact-match (giá trị phải xuất hiện trong answer sau normalize). gold_chunk_ids dùng prefix doc_id (vd 'ldd-2024') — cần re-baseline chunk_id thật sau lần ingest đầu (spike).",
-    "categories": ["legal", "fact_affordability", "aggregate", "mixed", "refusal", "as_of", "number_format"]
+    "categories": ["legal", "fact_affordability", "pricing", "aggregate", "mixed", "refusal", "as_of", "number_format"]
   },
   "questions": [
     {
@@ -310,6 +310,38 @@
       "expected_facts": {"price_vnd": 2700000000},
       "expected_answer_contains": ["A05-01", "2.700.000.000", "2,7 tỷ"],
       "notes": "Số viết chữ 'hai tỷ bảy trăm triệu' = 2.700.000.000."
+    },
+    {
+      "id": "pricing-01",
+      "question": "1m2 giá bao nhiêu theo tầng ở Camellia?",
+      "category": "pricing",
+      "expected_routing": {"needs_rag": true, "needs_sql": true, "structured_path": "pricing"},
+      "expected_answer_contains": ["t4-t10", "t11-t15", "t16-t20", "t21-25", "m2"],
+      "notes": "AC-2: per-m² theo từng mốc tầng — 1 row fe cho mỗi tier band từ attrs.price_tiers (t4-t10/t11-t15/t16-t20/t21-25 default), số từ v_unit_estimates + attrs, không LLM (D2). Không có ngân sách → pricing, không affordability (AC-6)."
+    },
+    {
+      "id": "pricing-02",
+      "question": "Căn CH-10 giá bao nhiêu?",
+      "category": "pricing",
+      "expected_routing": {"needs_rag": true, "needs_sql": true, "structured_path": "pricing"},
+      "expected_answer_contains": ["CH-10", "2PN", "nội khu"],
+      "notes": "AC-3: mã căn CH-10 không có giá chính thức (open #O2) → resolve về band unit:camellia/2pn-noi-khu qua attrs.unit_type_key; KHÔNG bịa giá per-unit."
+    },
+    {
+      "id": "pricing-03",
+      "question": "2PN góc giá bao nhiêu 1m2?",
+      "category": "pricing",
+      "expected_routing": {"needs_rag": true, "needs_sql": true, "structured_path": "pricing"},
+      "expected_answer_contains": ["2PN", "góc", "m2"],
+      "notes": "AC-4: per-m² của 2PN góc — view 'góc núi + biển' khớp synonym 'góc'; band price + per-m² từ range + area của type đó."
+    },
+    {
+      "id": "pricing-04",
+      "question": "3PN view biển giá 1 mét vuông bao nhiêu theo tầng?",
+      "category": "pricing",
+      "expected_routing": {"needs_rag": true, "needs_sql": true, "structured_path": "pricing"},
+      "expected_answer_contains": ["3PN", "t4-t10", "m2"],
+      "notes": "AC-2/AC-4: '3PN view biển' → type 3pn + view 'góc biển' (+ 'biển' synonym); per-m² theo tier band; CH-11 (cùng 3pn) resolve band."
     }
   ]
 }

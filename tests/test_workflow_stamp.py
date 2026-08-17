@@ -97,3 +97,42 @@ def test_sql_leg_skips_sql_when_not_needed(monkeypatch):
         assert stored.meta["mode"] == "none"
 
     asyncio.run(go())
+
+
+def test_sql_leg_stamps_pricing_path(monkeypatch):
+    from api import workflow as workflow_module
+
+    spec_in = {
+        "subject_type": "unit",
+        "source": "v_unit_estimates",
+        "query_type": "per_m2",
+        "limit": 20,
+    }
+    captured = {}
+
+    async def fake_run_sql_leg(spec, as_of, query):
+        captured["spec"] = spec
+        return SqlLegResult([], {"mode": "pricing"}, degraded=False)
+
+    monkeypatch.setattr(workflow_module, "run_sql_leg", fake_run_sql_leg)
+
+    async def go():
+        wf = RagQueryWorkflow()
+        ctx = Context(workflow=wf)
+        await ctx.store.set("routed", _routed("pricing", spec_in))
+        await ctx.store.set("guard", _Guard())
+        await ctx.store.set("as_of_date", None)
+        await ctx.store.set("degraded", [])
+
+        done = await wf.sql_leg(ctx, SqlRequestEv())
+        assert done is not None
+        assert captured["spec"]["structured_path"] == "pricing"
+        # Original spec body preserved — only the path is stamped.
+        assert captured["spec"]["source"] == "v_unit_estimates"
+        assert captured["spec"]["query_type"] == "per_m2"
+
+        stored = await ctx.store.get("sql_result")
+        assert stored.meta["mode"] == "pricing"
+        assert stored.degraded is False
+
+    asyncio.run(go())

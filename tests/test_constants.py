@@ -15,7 +15,7 @@ from api import constants
 # packages/contracts/src/constants.ts `API_SSE_EVENTS` (backend must not emit
 # an event the frontend does not know, and vice versa).
 # `places` (maps leg) is emitted before `sources` when the router requests geo.
-EXPECTED_SSE_EVENTS = {"places", "sources", "facts", "token", "done", "error"}
+EXPECTED_SSE_EVENTS = {"places", "sources", "facts", "token", "progress", "done", "error"}
 
 # Canonical 3-tier confidence values. Keep in sync with
 # packages/contracts/src/index.ts `type Confidence` and the FE badge mapping
