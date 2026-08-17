@@ -1,0 +1,34 @@
+feat(pricing+jina-fallback): Story 3.3 tiered pricing + Jina AI free-tier fallback
+
+## Story 3.3: Tiered Pricing Leg (ADR-0002 D2)
+- Deterministic price tier math from v_unit_estimates.attrs.price_tiers
+- Floor normalization (FIX-2): FLOOR_NORM=25/21, HIGHEST_SALE_INDEX=22
+- Per-m² honest range: price_min/area_max .. price_max/area_min (rounded to 1k VND)
+- Unit-code -> type band resolution (CH-10, CH-03A, case/dash-insensitive)
+- Neutral fallback when no price_tiers: all pct=0.0 (never fabricate premium)
+- D3 gate pattern: LLM proposes 'pricing', detector confirms (same as affordability/nl2sql)
+- Budget/pricing collision guards: budget >=1M VND wins; pricing only when budget=None
+- High-stakes/aggregate/relational suppression
+- SSE event order: progress -> places -> sources -> facts -> token -> done
+- Graceful degradation: no estimates=degraded; match nothing=empty non-degraded
+
+## Jina AI Free-Tier Fallback (10M tokens)
+- Add 'jina' binding for LLM (deepsearch.jina.ai/v1), embedding (jina-embeddings-v3), rerank (jina-reranker-v3.5)
+- Auto-switch credentials in dependencies.py when binding=jina
+- Accept 'jina' embedding binding in lightrag_init.py
+- 10 new Jina Settings fields with sensible defaults
+- JINA_* env vars in .env with placeholder keys
+
+## Tests
+- 83 Story 3.3 tests (price_calc, pricing_leg, rewrite, workflow_stamp)
+- 10 Jina fallback tests (constants, http_rerank, config, dependencies, lightrag)
+- Total: 184 tests pass (was 184 before merge)
+
+## Files
+- Core: api/price_calc.py, api/sql_leg.py, api/rewrite.py, api/workflow.py, api/merge.py
+- Jina: api/constants.py, api/adapters/http_rerank.py, api/config.py, api/dependencies.py, ingest/lightrag_init.py
+- Tests: tests/test_price_calc.py, test_pricing_leg.py, test_rewrite.py, test_workflow_stamp.py, test_jina_fallback.py, test_rewrite_timeout.py
+- Contracts: packages/contracts/src/{constants,index}.ts
+- Frontend: apps/web/src/lib/{api,progress}.ts, components/{ChatPage,EvidencePanel,MessageList}.tsx
+- Seed: db/seed/camellia_rumor.sql, README.md
+- Prompts: prompts/rewrite_fewshot.md, prompts/system_policy.md
