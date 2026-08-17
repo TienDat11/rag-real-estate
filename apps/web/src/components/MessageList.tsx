@@ -9,12 +9,15 @@ import { Empty } from "antd";
 interface MessageListProps {
   messages: ChatMessage[];
   streaming: boolean;
+  /** Friendly per-step loading label shown while streaming; empty to hide. */
+  progressLabel?: string;
 }
 
 const SUGGESTIONS = [
+  "1m2 giá bao nhiêu theo tầng ở Camellia?",
+  "Căn CH-10 giá bao nhiêu?",
   "Thế chấp đất cho ngân hàng cần những giấy tờ gì?",
   "Cầm cố sổ đỏ giấy tay có hợp pháp không?",
-  "Chuyển nhượng đất nông nghiệp cần điều kiện gì?",
   "Quy hoạch dự án tại quận 9 hiện trạng thế nào?",
 ];
 
@@ -22,7 +25,7 @@ const SUGGESTIONS = [
  * Scrollable message area. Auto-scrolls to the bottom on new messages or
  * while streaming; shows question suggestions before the first exchange.
  */
-export function MessageList({ messages, streaming }: MessageListProps) {
+export function MessageList({ messages, streaming, progressLabel }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,6 +93,24 @@ export function MessageList({ messages, streaming }: MessageListProps) {
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
+        {streaming && progressLabel && (
+          <div
+            className="progress-label"
+            role="status"
+            aria-live="polite"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 12.5,
+              color: "#5B6478",
+              marginTop: -4,
+            }}
+          >
+            <span className="progress-spinner" aria-hidden="true" />
+            <span>{progressLabel}</span>
+          </div>
+        )}
       </div>
     </div>
   );

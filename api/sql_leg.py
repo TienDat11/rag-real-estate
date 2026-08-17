@@ -25,6 +25,8 @@ from api.price_calc import (
     affordability_summary,
     analyze_affordability,
     offer_from_row,
+    pricing_rows,
+    pricing_summary,
 )
 
 logger = logging.getLogger("api.sql_leg")
@@ -512,6 +514,59 @@ async def run_affordability(spec: dict, as_of: date | None, fetch=None) -> SqlLe
     return SqlLegResult(evidence, meta, degraded=False)
 
 
+async def run_pricing(spec: dict, as_of: date | None, fetch=None) -> SqlLegResult:
+    """Deterministic pricing leg: estimates -> tiered per-m²/band fe rows + meta.
+
+    Numbers come only from v_unit_estimates via tiered_band_prices/per_m2_range
+    (ADR-0002 D2 — no LLM-computed prices). The fetch is injectable so tests
+    never touch the pool. No estimates at all degrades (BH-9); rows that exist
+    but match nothing stay non-degraded with empty evidence (AC-8).
+    """
+    fetch_fn = fetch or _fetch_estimates
+    try:
+        rows = await fetch_fn()
+        if not rows:
+            return SqlLegResult(
+                [],
+                {
+                    "mode": "pricing",
+                    "source": "v_unit_estimates",
+                    "degraded_reason": "no_estimates",
+                },
+                degraded=True,
+            )
+        # Skip rows without a price (F7 contract) — never fabricate a 0 band.
+        offers = [offer_from_row(r) for r in rows if r.get("price_min_vnd") is not None]
+        evidence = pricing_rows(offers, spec)
+        limit = int(spec.get("limit") or 20)
+        if limit > 0:
+            evidence = evidence[:limit]
+    except Exception as exc:  # noqa: BLE001 — fetch/parse failure degrades, never crashes
+        logger.warning("sql_leg: pricing data failed: %s", exc)
+        return SqlLegResult([], {"mode": "pricing", "error": str(exc)}, degraded=True)
+    meta = {
+        "mode": "pricing",
+        "source": "v_unit_estimates",
+        "row_count": len(evidence),
+        "sql_query": f"SELECT {', '.join(ESTIMATE_COLUMNS)} FROM v_unit_estimates",
+        # The view pins CURRENT_DATE (camellia_estimate.sql) — the requested
+        # as_of is intentionally not applied; surface that to the audit (BH-16).
+        "as_of_applied": False,
+        **pricing_summary(
+            {
+                "mode": "pricing",
+                "has_approx": True,
+                "row_count": len(evidence),
+                "matched_subjects": sorted({e["subject"] for e in evidence}),
+            }
+        ),
+    }
+    # Merge rule (workflow.py:357): estimate trust caps confidence — pricing fe
+    # rows are always estimate, so has_approx must mirror the merge (BH-10).
+    meta["has_approx"] = True
+    return SqlLegResult(evidence, meta, degraded=False)
+
+
 # Runner.
 async def run_sql_leg(spec: dict | None, as_of: date | None, query: str) -> SqlLegResult:
     """Run R1 (spec-builder), R2 (nl2sql), or the affordability leg when routed.
@@ -539,6 +594,14 @@ async def run_sql_leg(spec: dict | None, as_of: date | None, query: str) -> SqlL
         except Exception as exc:  # noqa: BLE001 — leg failure degrades, never crashes
             logger.warning("sql_leg: affordability degraded: %s", exc)
             return SqlLegResult([], {"mode": "affordability", "error": str(exc)}, degraded=True)
+
+    # Pricing dispatch (story 3.3): same v_unit_estimates pre-validate placement.
+    if spec.get("structured_path") == "pricing":
+        try:
+            return await run_pricing(spec, as_of)
+        except Exception as exc:  # noqa: BLE001 — leg failure degrades, never crashes
+            logger.warning("sql_leg: pricing degraded: %s", exc)
+            return SqlLegResult([], {"mode": "pricing", "error": str(exc)}, degraded=True)
 
     try:
         validate_spec(spec)

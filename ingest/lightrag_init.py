@@ -53,16 +53,27 @@ def _make_embedding_func() -> Any:
     except ImportError as exc:  # pragma: no cover — environment-dependent
         raise LightRAGUnavailableError(f"Thiếu lightrag-hku==1.5.6: {exc}") from exc
 
-    if settings.embedding_binding in ("dashscope", "aibox") and settings.embedding_api_key:
+    if settings.embedding_binding in ("dashscope", "aibox", "jina") and settings.embedding_api_key:
         # openai SDK 2.x turns a bare host into a plain-text response (no .data),
         # so the base URL must carry the /v1 path like llm_base_url_v1 does.
-        base = settings.embedding_base_url.strip()
-        embedding_http_base = base if base.rstrip("/").endswith("/v1") else base.rstrip("/") + "/v1"
+        # When binding is jina, prefer Jina-specific credentials from Settings.
+        _bind = settings.embedding_binding.strip().lower()
+        _is_jina_emb = _bind == "jina"
+        _emb_api_key = (
+            settings.jina_embedding_api_key if _is_jina_emb
+            else settings.embedding_api_key
+        )
+        _emb_base = (
+            settings.jina_embedding_base_url if _is_jina_emb
+            else settings.embedding_base_url
+        ).strip()
+        _eb = _emb_base.rstrip("/")
+        embedding_http_base = _eb if _eb.endswith("/v1") else _eb + "/v1"
         client = openai.AsyncOpenAI(
-            api_key=settings.embedding_api_key,
+            api_key=_emb_api_key,
             base_url=embedding_http_base,
         )
-        model = settings.embedding_model
+        model = settings.jina_embedding_model if _bind == "jina" else settings.embedding_model
 
         async def embed(texts: list[str]) -> np.ndarray:
             resp = await client.embeddings.create(model=model, input=texts)

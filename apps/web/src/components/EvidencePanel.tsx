@@ -75,7 +75,7 @@ export function EvidencePanel({ sources, facts, activeMessageId }: EvidencePanel
               key: "facts",
               label: (
                 <Typography.Text style={{ fontSize: 12, color: "#5B6478" }}>
-                  Sự kiện pháp lý ({facts.length})
+                  Sự kiện / số liệu ({facts.length})
                 </Typography.Text>
               ),
               children: <FactsTable facts={facts} variant="cards" />,

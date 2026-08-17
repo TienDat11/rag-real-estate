@@ -33,6 +33,7 @@ from api.audit import write_audit
 from api.constants import (
     SSE_EVENT_FACTS,
     SSE_EVENT_PLACES,
+    SSE_EVENT_PROGRESS,
     SSE_EVENT_SOURCES,
     SSE_EVENT_TOKEN,
 )
@@ -157,6 +158,7 @@ class RagQueryWorkflow(Workflow):
     # --- steps -----------------------------------------------------------------
     @step()
     async def guard(self, ctx: Context, ev: StartEvent) -> GuardedEv:
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "guard"})
         t0 = time.perf_counter()
         trace_id = "t-" + uuid.uuid4().hex[:10]
         session_id = getattr(ev, "session_id", None)
@@ -201,6 +203,7 @@ class RagQueryWorkflow(Workflow):
     async def route(
         self, ctx: Context, ev: GuardedEv
     ) -> RagRequestEv | SqlRequestEv | GeoRequestEv | None:
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "rewrite"})
         as_of = await ctx.store.get("as_of_date")
         as_of_iso = as_of.isoformat() if as_of else None
         try:
@@ -235,6 +238,7 @@ class RagQueryWorkflow(Workflow):
 
     @step()
     async def rag_leg(self, ctx: Context, ev: RagRequestEv) -> RagDoneEv:
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "rag"})
         routed: RoutedResult = await ctx.store.get("routed")
         if not routed.routing.get("needs_rag", True):
             await ctx.store.set("rag_result", RagLegResult([], degraded=False))
@@ -262,6 +266,7 @@ class RagQueryWorkflow(Workflow):
 
     @step()
     async def sql_leg(self, ctx: Context, ev: SqlRequestEv) -> SqlDoneEv:
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "sql"})
         routed: RoutedResult = await ctx.store.get("routed")
         if not routed.routing.get("needs_sql", False):
             await ctx.store.set("sql_result", SqlLegResult([], {"mode": "none"}, degraded=False))
@@ -274,6 +279,9 @@ class RagQueryWorkflow(Workflow):
         elif routed.routing.get("structured_path") == "affordability":
             spec = dict(spec)
             spec["structured_path"] = "affordability"
+        elif routed.routing.get("structured_path") == "pricing":
+            spec = dict(spec)
+            spec["structured_path"] = "pricing"
         timeout = (
             STEP_TIMEOUTS["sql_nl2sql"]
             if routed.routing.get("structured_path") == "nl2sql"
@@ -297,6 +305,7 @@ class RagQueryWorkflow(Workflow):
 
     @step()
     async def geo_leg(self, ctx: Context, ev: GeoRequestEv) -> GeoDoneEv:
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "geo"})
         routed: RoutedResult = await ctx.store.get("routed")
         if not routed.routing.get("needs_geo", False):
             await ctx.store.set("geo_result", GeoResult([], degraded=False))
@@ -334,6 +343,7 @@ class RagQueryWorkflow(Workflow):
         as_of = await ctx.store.get("as_of_date")
 
         # App-side rerank is the single score source for confidence.
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "rerank"})
         chunks = rag_result.chunks
         try:
             chunks = await asyncio.wait_for(
@@ -347,6 +357,7 @@ class RagQueryWorkflow(Workflow):
             await self._flag(ctx, "rerank_degraded")
         await ctx.store.set("reranked_chunks", chunks)
 
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "merge"})
         merged: Merged = await merge_context(guard.clean, chunks, sql_result.rows, as_of)
         merged.meta.update(
             query=guard.clean,
@@ -380,6 +391,7 @@ class RagQueryWorkflow(Workflow):
 
     @step()
     async def generate(self, ctx: Context, ev: MergedEv) -> GeneratedEv:
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "generate"})
         merged: Merged = await ctx.store.get("merged")
         routed: RoutedResult = await ctx.store.get("routed")
         parts: list[str] = []
@@ -425,6 +437,7 @@ class RagQueryWorkflow(Workflow):
         await ctx.store.set("audit", audit)
         await self._write_audit(ctx)
 
+        await self._emit(SSE_EVENT_PROGRESS, {"step": "done"})
         return StopEvent(
             result={
                 "answer": answer,

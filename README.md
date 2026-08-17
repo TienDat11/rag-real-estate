@@ -47,11 +47,17 @@ POST /query  →  input guard → rewrite/route → (RAG leg ∥ SQL leg) → re
 
 ```bash
 # 1. Dev DB — áp schema + seed theo thứ tự (xem db/seed/README.md)
+#    KHÔNG cần cài psql trên máy: gọi psql BÊN TRONG container postgres.
+#    Chạy từ thư mục repo (nơi có docker-compose.yml).
 docker compose up -d
-psql -f db/schema.sql && psql -f db/audit.sql \
-  && psql -f db/seed/legal_docs.sql && psql -f db/seed/price_campaigns.sql \
-  && psql -f db/seed/policy_vay.sql   # optional — policy đã có trong price_campaigns.sql
-psql -f scripts/verify_ingest.sql     # verify seed
+PSQL="docker compose exec -T postgres psql -U ragre -d ragre -v ON_ERROR_STOP=1"
+$PSQL < db/schema.sql
+$PSQL < db/audit.sql
+$PSQL < db/camellia_estimate.sql       # package camellia + view v_unit_estimates
+$PSQL < db/seed/camellia_rumor.sql     # 6 unit types (attrs.price_tiers) + 24 range facts
+$PSQL < db/seed/legal_docs.sql && $PSQL < db/seed/price_campaigns.sql \
+  && $PSQL < db/seed/policy_vay.sql    # optional — policy đã có trong price_campaigns.sql
+$PSQL < scripts/verify_ingest.sql      # verify seed (mọi count phải = 0/OK)
 
 # 2. Backend (copy .env.example → .env, điền secret)
 .venv/Scripts/python -m uvicorn api.main:app --port 8000
@@ -59,6 +65,11 @@ psql -f scripts/verify_ingest.sql     # verify seed
 # 3. Frontend
 npm run dev:web   # → http://localhost:3000
 ```
+
+> **Lưu ý seed 3.3 (pricing tiered leg):** `db/camellia_estimate.sql` PHẢI chạy trước
+> `db/seed/camellia_rumor.sql` (camellia_rumor tạo price_tiers attrs cho 6 loại căn +
+> 24 fact range — view `v_unit_estimates` cần có sẵn từ estimate file). Giá 1m² theo
+> tầng và theo mã căn đều đọc từ DB này, không phải LLM tính (ADR-0002 D2/D6).
 
 ## Quality gates (bắt buộc trước khi push PR)
 

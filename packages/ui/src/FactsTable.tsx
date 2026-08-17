@@ -4,6 +4,14 @@ import type { ColumnsType } from "antd/es/table";
 import type { FactEvidence } from "@rag-ragre/contracts";
 import { formatVND } from "@rag-ragre/contracts";
 
+/** Pricing-tier rows (story 3.3) carry this marker in fields — render as bands. */
+const PRICING_FIELD_MARKERS = ["band_pct", "floor_from", "per_m2_min_vnd"];
+
+function isPricingRow(fact: FactEvidence): boolean {
+  const fields = fact.fields ?? {};
+  return PRICING_FIELD_MARKERS.some((k) => fields[k] !== undefined);
+}
+
 export interface FactsTableProps {
   facts: FactEvidence[];
   /** When true, VND-money-shaped values are formatted via formatVND. */
@@ -35,6 +43,22 @@ export function FactsTable({ facts, formatMoney = true, variant = "table" }: Fac
             <Typography.Text strong style={{ fontSize: 12.5, color: "#1A2233", display: "block" }}>
               {fact.subject}
             </Typography.Text>
+            {isPricingRow(fact) && (
+              <span
+                style={{
+                  fontSize: 10.5,
+                  color: "#9A5B00",
+                  background: "#FFF4E0",
+                  padding: "0 6px",
+                  borderRadius: 4,
+                  display: "inline-block",
+                  marginTop: 2,
+                  fontWeight: 600,
+                }}
+              >
+                Bậc giá theo tầng
+              </span>
+            )}
             {fact.policy_key && (
               <code style={{ fontSize: 11.5, color: "#1F46A8", background: "#EEF2FA", padding: "0 5px", borderRadius: 4 }}>
                 {fact.policy_key}
@@ -81,10 +105,27 @@ export function FactsTable({ facts, formatMoney = true, variant = "table" }: Fac
       title: "Sự kiện / tình huống",
       dataIndex: "subject",
       key: "subject",
-      render: (value: string) => (
-        <Typography.Text strong style={{ fontSize: 13 }}>
-          {value}
-        </Typography.Text>
+      render: (value: string, record) => (
+        <>
+          <Typography.Text strong style={{ fontSize: 13 }}>
+            {value}
+          </Typography.Text>
+          {isPricingRow(record) && (
+            <Typography.Text
+              style={{
+                fontSize: 10.5,
+                color: "#9A5B00",
+                background: "#FFF4E0",
+                padding: "0 6px",
+                borderRadius: 4,
+                marginLeft: 6,
+                fontWeight: 600,
+              }}
+            >
+              Bậc giá theo tầng
+            </Typography.Text>
+          )}
+        </>
       ),
     },
     {
@@ -154,20 +195,30 @@ export function FactsTable({ facts, formatMoney = true, variant = "table" }: Fac
   );
 }
 
-/** Format field value: VND-like strings and numbers -> formatVND. */
+const VND_KEY = /(price|per_m2|vnd|giá|tiền|phí|thuế|giá_trị)/i;
+const PCT_KEY = /(pct|percent|phần trăm)/i;
+
+/** Format field value: money keys -> VND, pct -> %, arrays -> joined list. */
 function formatField(
   key: string,
-  value: number | string | null,
+  value: number | string | boolean | null | Array<number | string>,
   formatMoney: boolean
-): string | ReactNode {
+): ReactNode {
   if (value === null || value === undefined) return <span style={{ color: "#B0B7C6" }}>—</span>;
+  if (Array.isArray(value)) {
+    return value.length ? value.join(", ") : <span style={{ color: "#B0B7C6" }}>—</span>;
+  }
+  if (typeof value === "boolean") return value ? "có" : "không";
   if (typeof value === "number") {
-    return formatMoney ? formatVND(value) : String(value);
+    if (formatMoney && VND_KEY.test(key)) return formatVND(value);
+    if (PCT_KEY.test(key)) return value + "%";
+    return String(value);
   }
   // Numeric-looking string (from backend JSON) -> treat as price when key hints money.
-  const looksLikeMoney = /(giá|tiền|phí|thuế|giá_trị)/i.test(key);
+  const looksLikeMoney = VND_KEY.test(key);
   if (formatMoney && looksLikeMoney && /^\d+(\.\d+)?$/.test(value)) {
     return formatVND(Number(value));
   }
+  if (PCT_KEY.test(key) && /^-?\d+(\.\d+)?$/.test(value)) return value + "%";
   return value;
 }

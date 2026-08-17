@@ -15,6 +15,7 @@ from api.constants import (
     DEFAULT_RERANK_TIMEOUT_S,
     RERANK_ENDPOINT_AIBOX,
     RERANK_ENDPOINT_DASHSCOPE,
+    RERANK_ENDPOINT_JINA,
 )
 from api.ports.rerank import RerankPort
 
@@ -37,7 +38,12 @@ class HttpRerank(RerankPort):
         if not self.api_key or not self.base_url:
             return [_flag_degraded(c, "rerank_off") for c in chunks]
 
-        endpoint = RERANK_ENDPOINT_DASHSCOPE if self.binding == "dashscope" else RERANK_ENDPOINT_AIBOX
+        if self.binding == "dashscope":
+            endpoint = RERANK_ENDPOINT_DASHSCOPE
+        elif self.binding == "jina":
+            endpoint = RERANK_ENDPOINT_JINA
+        else:
+            endpoint = RERANK_ENDPOINT_AIBOX
         payload: dict = {
             "model": self.model,
             "query": query,

@@ -284,3 +284,106 @@ def test_price_plus_count_forced_documented():
     assert routed.routing["structured_path"] == "affordability"
     assert routed.sql_spec["budget_vnd"] == 4_000_000_000
 
+
+# ---- pricing leg routing (story 3.3) ----------------------------------------
+def test_allowlist_accepts_pricing_path():
+    # No budget (affordability must not hijack): per-m² cue confirms pricing.
+    routed = _route(
+        {"routing": {"structured_path": "pricing", "needs_sql": True}},
+        query="1m2 giá bao nhiêu theo tầng",
+    )
+    assert routed.routing["structured_path"] == "pricing"
+
+
+def test_per_m2_query_forces_pricing():
+    # '1m2 giá bao nhiêu theo tầng' — no budget; per-m² keyword + tier keyword.
+    routed = _route(
+        {"routing": {"needs_sql": False, "structured_path": "none"}},
+        query="1m2 giá bao nhiêu theo tầng",
+    )
+    assert routed.routing["structured_path"] == "pricing"
+    assert routed.routing["needs_sql"] is True
+    assert routed.sql_spec["source"] == "v_unit_estimates"
+    assert routed.sql_spec["query_type"] == "tier"
+    assert "pricing_injected" in routed.degraded
+
+
+def test_unit_price_query_forces_pricing():
+    routed = _route(
+        {"routing": {"needs_sql": False, "structured_path": "none"}},
+        query="căn CH-10 giá bao nhiêu",
+    )
+    assert routed.routing["structured_path"] == "pricing"
+    assert routed.sql_spec["source"] == "v_unit_estimates"
+    assert routed.sql_spec["unit_code"] == "CH-10"
+
+
+def test_bedroom_view_query_forces_pricing():
+    routed = _route(
+        {"routing": {"needs_sql": False, "structured_path": "none"}},
+        query="2PN nội khu giá bao nhiêu 1m2",
+    )
+    assert routed.routing["structured_path"] == "pricing"
+    assert routed.sql_spec["bedrooms"] == "2PN"
+    assert routed.sql_spec["view"] == "nội khu"
+
+
+def test_pricing_never_fires_with_budget():
+    # Budget present -> affordability wins (AC-6).
+    routed = _route(
+        {"routing": {"needs_sql": False, "structured_path": "none"}},
+        query="2 tỷ mua nhà nào",
+    )
+    assert routed.routing["structured_path"] == "affordability"
+    assert routed.sql_spec["source"] == "v_unit_estimates"
+    assert routed.sql_spec["budget_vnd"] == 2_000_000_000
+
+
+def test_pricing_never_fires_high_stakes():
+    routed = _route(
+        {"routing": {"needs_sql": False, "structured_path": "none"}},
+        query="căn CH-10 giá bao nhiêu, cầm cố có an toàn không",
+    )
+    assert routed.routing["structured_path"] == "none"
+    assert routed.sql_spec is None
+
+
+def test_pricing_never_fires_aggregate():
+    routed = _route(
+        {"routing": {"needs_sql": False, "structured_path": "none"}},
+        query="giá trung bình 1m2 là bao nhiêu",
+    )
+    assert routed.routing["structured_path"] != "pricing"
+
+
+def test_pricing_never_fires_compound_spec():
+    # LLM gives a real compound facts spec -> pricing must not hijack.
+    routed = _route(
+        {
+            "routing": {"needs_sql": True, "structured_path": "spec"},
+            "sql_spec": _facts_spec(),
+        },
+        query="căn 60m2 giá dưới 2 tỷ",
+    )
+    assert routed.routing["structured_path"] == "spec"
+
+
+def test_unconfirmed_llm_pricing_demotes():
+    # LLM proposed 'pricing' but the detector found no pricing cue -> demote.
+    routed = _route(
+        {"routing": {"needs_sql": False, "structured_path": "pricing"}},
+        query="căn hộ nào đang mở bán",
+    )
+    assert routed.routing["structured_path"] == "none"
+    assert "pricing_unconfirmed" in routed.degraded
+
+
+def test_plain_price_question_without_pricing_cue_stays_none():
+    # 'giá bao nhiêu' alone is not a per-m²/tier/unit lookup — no force.
+    routed = _route(
+        {"routing": {"needs_sql": False, "structured_path": "none"}},
+        query="dự án Camellia giá bao nhiêu",
+    )
+    assert routed.routing["structured_path"] == "none"
+
+

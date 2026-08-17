@@ -41,9 +41,13 @@ def get_llm() -> LLMChatPort:
     global _llm
     if _llm is None:
         s = get_settings()
+        # Auto-switch to Jina fallback credentials when LLM binding targets jina
+        _is_jina = "jina" in (s.llm_base_url or "").lower()
+        _llm_api_key = s.llm_api_key or (s.jina_llm_api_key if _is_jina else "")
+        _llm_base = s.llm_base_url_v1 or s.jina_llm_base_url
         _llm = OpenAICompatibleLLM(
-            api_key=s.llm_api_key or "",
-            base_url=s.llm_base_url_v1 or "",
+            api_key=_llm_api_key,
+            base_url=_llm_base,
             default_model=s.llm_model_answer or DEFAULT_MODEL_ANSWER,
         )
     return _llm
@@ -58,9 +62,12 @@ def get_reranker() -> RerankPort:
         if not s.enable_rerank or binding not in RERANK_BINDINGS:
             _reranker = NoopRerank()
         else:
+            # Auto-switch to Jina fallback credentials when binding is jina
+            _rk = s.rerank_api_key or (s.jina_rerank_api_key if binding == "jina" else "")
+            _rb = s.rerank_base_url or (s.jina_rerank_base_url if binding == "jina" else "")
             _reranker = HttpRerank(
-                api_key=s.rerank_api_key or "",
-                base_url=s.rerank_base_url or "",
+                api_key=_rk,
+                base_url=_rb,
                 binding=binding,
                 model=s.rerank_model or DEFAULT_RERANK_MODEL,
             )

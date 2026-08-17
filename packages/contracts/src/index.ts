@@ -33,12 +33,20 @@ export interface Source {
   kind: string;
 }
 
-/** Legal fact extracted from sources, with evidence. */
+/** Legal/price fact extracted from sources, with evidence. */
 export interface FactEvidence {
   fe_id: string;
   subject: string;
   policy_key?: string;
-  fields: Record<string, number | string | null>;
+  /**
+   * Guard-groundable scalars plus display lists. Money keys are raw VND
+   * integers; arrays (unit_codes, area_m2) are display lists the UI joins —
+   * the backend never sends nested objects (story 3.3 pricing contract).
+   */
+  fields: Record<
+    string,
+    number | string | boolean | null | Array<number | string>
+  >;
   note?: string;
 }
 
@@ -55,7 +63,7 @@ export interface NearbyPlace {
 
 export type Confidence = "HIGH" | "MEDIUM" | "LOW";
 
-export type StructuredPath = "spec" | "nl2sql" | "affordability" | "none";
+export type StructuredPath = "spec" | "nl2sql" | "affordability" | "pricing" | "none";
 
 export interface QueryResponseRouting {
   needs_rag: boolean;
@@ -76,7 +84,7 @@ export interface QueryResponse {
   latency_ms: number;
 }
 
-export type SseEventName = "places" | "sources" | "facts" | "token" | "done" | "error";
+export type SseEventName = "places" | "sources" | "facts" | "token" | "progress" | "done" | "error";
 
 /** A single event in the SSE stream of `POST /api/query`. */
 export interface SseEvent {

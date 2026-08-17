@@ -56,14 +56,14 @@ class Settings(BaseSettings):
     lightrag_workspace: str = "ragre_mvp"
 
     # Embedding (LOCK: text-embedding-v4, dims 1024 — a change means a full re-embed)
-    embedding_binding: str = "dashscope"  # dashscope | aibox | local
+    embedding_binding: str = "dashscope"  # dashscope | aibox | jina | local
     embedding_api_key: str = ""
     embedding_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     embedding_model: str = "text-embedding-v4"
     embedding_dim: int = 1024
 
     # Rerank (app-side; single score source for confidence)
-    rerank_binding: str = "dashscope"  # dashscope | aibox | null
+    rerank_binding: str = "dashscope"  # dashscope | aibox | jina | null
     rerank_api_key: str = ""
     rerank_base_url: str = ""
     rerank_model: str = "qwen3-rerank"
@@ -99,6 +99,19 @@ class Settings(BaseSettings):
         """
         base = (self.llm_base_url or "").strip()
         return base if base.rstrip("/").endswith("/v1") else base.rstrip("/") + "/v1"
+
+    # --- Jina AI fallback (free tier: 10M tokens) ---
+    # See api/dependencies.py for auto-switching logic when binding=jina.
+    jina_embedding_api_key: str = ""
+    jina_embedding_base_url: str = "https://api.jina.ai/v1"
+    jina_embedding_model: str = "jina-embeddings-v3"
+    jina_embedding_dim: int = 1024
+    jina_rerank_api_key: str = ""
+    jina_rerank_base_url: str = "https://api.jina.ai"
+    jina_rerank_model: str = "jina-reranker-v3.5"
+    jina_llm_api_key: str = ""
+    jina_llm_base_url: str = "https://deepsearch.jina.ai/v1"
+    jina_llm_model_answer: str = "jina-deepsearch-v1"
 
     # Query token budgets (RAG leg)
     rag_max_entity_tokens: int = Field(default=2000, validation_alias="QUERY_MAX_ENTITY_TOKENS")

@@ -346,3 +346,182 @@ def affordability_summary(result: dict) -> dict:
         "loan_count": len(result["loan"]),
         "has_approx": result["has_approx"],
     }
+
+
+# --- Pricing tiered leg (story 3.3) -------------------------------------------
+# Band boundaries are data (attrs.price_tiers); the fallback ladder is the
+# neutral shape with zero premium so a missing config never fabricates a tier
+# markup (ADR-0002 D2 — numbers only from the DB/attrs).
+DEFAULT_TIER_BANDS: list[dict] = [
+    {"band": "t4-t10", "floor_from": 4, "floor_to": 10, "pct": 0.0},
+    {"band": "t11-t15", "floor_from": 11, "floor_to": 15, "pct": 0.0},
+    {"band": "t16-t20", "floor_from": 16, "floor_to": 20, "pct": 0.0},
+    {"band": "t21-25", "floor_from": 21, "floor_to": 25, "pct": 0.0},
+]
+
+# Sane bounds for attrs-provided percents; corrupt config falls back (never
+# fabricate -20%/+500% from a typo).
+_PCT_MIN, _PCT_MAX = -20.0, 50.0
+
+
+def price_tiers_from_attrs(attrs: dict[str, Any] | None) -> list[dict]:
+    """Parse attrs.price_tiers; neutral DEFAULT_TIER_BANDS when absent/invalid.
+
+    Each tier is {band, floor_from, floor_to, pct} where pct is the cumulative
+    percent over the subject's base range at that band (DB config, D2).
+    """
+    raw = (attrs or {}).get("price_tiers")
+    if not isinstance(raw, list) or not raw:
+        return DEFAULT_TIER_BANDS
+    tiers: list[dict] = []
+    for t in raw:
+        if not isinstance(t, dict):
+            return DEFAULT_TIER_BANDS
+        pct = t.get("pct")
+        floor_from = t.get("floor_from")
+        floor_to = t.get("floor_to")
+        band = t.get("band")
+        if not isinstance(band, str) or not band:
+            return DEFAULT_TIER_BANDS
+        if not isinstance(pct, (int, float)) or isinstance(pct, bool):
+            return DEFAULT_TIER_BANDS
+        if not isinstance(floor_from, int) or not isinstance(floor_to, int):
+            return DEFAULT_TIER_BANDS
+        if not _PCT_MIN <= pct <= _PCT_MAX:
+            return DEFAULT_TIER_BANDS
+        tiers.append(
+            {"band": band, "floor_from": floor_from, "floor_to": floor_to, "pct": float(pct)}
+        )
+    return tiers or DEFAULT_TIER_BANDS
+
+
+def tiered_band_prices(offer: Offer, tier: dict) -> tuple[int, int]:
+    """Band price range at a tier: base range scaled by the cumulative pct."""
+    pct = float(tier.get("pct", 0.0))
+    factor = 1.0 + pct / 100.0
+    return int(round(offer.price_min_vnd * factor)), int(round(offer.price_max_vnd * factor))
+
+
+def per_m2_range(
+    price_min_vnd: int, price_max_vnd: int, area_range: list[float] | None, step: int = 1_000
+) -> tuple[int, int]:
+    """Honest per-m² range: min/m² = price_min/area_max, max/m² = price_max/area_min.
+
+    Using the range pair the right way keeps the per-m² answer a real range
+    (speaking rule 'giá dao động TỪ X ĐẾN Y'), rounded to step VND.
+    """
+    if not area_range or len(area_range) < 2:
+        return 0, 0
+    area_min, area_max = float(area_range[0]), float(area_range[1])
+    if area_min <= 0 or area_max <= 0:
+        return 0, 0
+    lo = int(round((price_min_vnd / area_max) / step) * step)
+    hi = int(round((price_max_vnd / area_min) / step) * step)
+    return lo, hi
+
+
+def resolve_unit_type_for_code(offers: list[Offer], unit_code: str) -> Offer | None:
+    """Find the type band whose attrs.units contains the code (normalized).
+
+    CH-10/CH-11 also exist as standalone subjects; their price rows are absent
+    (open #O2) so the code resolves to a type band via units lists — never to an
+    invented per-unit price (spec 3.3 AC-3).
+    """
+    target = (unit_code or "").strip().upper().replace("-", "").replace(" ", "")
+    if not target:
+        return None
+    for o in offers:
+        for code in (o.attrs or {}).get("units") or []:
+            if str(code).upper().replace("-", "").replace(" ", "") == target:
+                return o
+    return None
+
+
+def _match_pricing_offer(offer: Offer, spec: dict) -> bool:
+    """True when an offer satisfies the pricing spec hints (unit_code/bedrooms/view).
+
+    Matching runs over attrs only (type/view/units) so the detector does not need
+    to know subject_keys (DB-agnostic). unit_code wins; else bedrooms; else view.
+    """
+    attrs = offer.attrs or {}
+    code = spec.get("unit_code")
+    if code:
+        return resolve_unit_type_for_code([offer], code) is not None
+    bedrooms = spec.get("bedrooms")
+    if bedrooms:
+        type_label = str(attrs.get("type") or "").strip().upper()
+        want = str(bedrooms).strip().upper().replace(" ", "")
+        return type_label.replace(" ", "") == want or want in type_label
+    view = spec.get("view")
+    if view:
+        return any(_view_token(v) == _view_token(view) for v in _VIEW_SYNONYMS(attrs.get("view")))
+    return True  # no hints -> every offer matches (whole price list)
+
+
+def _view_token(v: str) -> str:
+    return (v or "").strip().lower().replace(" ", "").replace("+", "")
+
+
+def _VIEW_SYNONYMS(view: str) -> list[str]:
+    """Expand a view label into tokens so 'biển' matches 'góc biển'/'núi + biển'."""
+    v = _view_token(view)
+    words = [w for w in re.split(r"[^a-z0-9à-ỹ]+", v) if w]
+    return [v, *words]
+
+
+def pricing_rows(offers: list[Offer], spec: dict) -> list[dict]:
+    """fe evidence rows for the pricing leg — one row per (matched type, tier band).
+
+    Numbers derived only from the offer's real range/attrs (D2). Per-m² uses the
+    honest area range pair; scalar fields stay guard-groundable (no nesting).
+    """
+    matched = [o for o in offers if _match_pricing_offer(o, spec)]
+    fe: list[dict] = []
+    i = 0
+    for offer in matched:
+        tiers = price_tiers_from_attrs(offer.attrs)
+        area = (offer.attrs or {}).get("area_m2")
+        for tier in tiers:
+            lo, hi = tiered_band_prices(offer, tier)
+            pmin, pmax = per_m2_range(lo, hi, area)
+            i += 1
+            fe.append(
+                {
+                    "fe_id": f"fe-{i:03d}",
+                    "subject": offer.subject_key,
+                    "policy_key": None,
+                    "fields": {
+                        "leg": "pricing",
+                        "unit_type_key": offer.subject_key,
+                        "view": (offer.attrs or {}).get("view"),
+                        "floor_band": tier["band"],
+                        "floor_from": tier["floor_from"],
+                        "floor_to": tier["floor_to"],
+                        "band_pct": tier["pct"],
+                        "price_min_vnd": lo,
+                        "price_max_vnd": hi,
+                        "per_m2_min_vnd": pmin,
+                        "per_m2_max_vnd": pmax,
+                        "area_m2": area if area else None,
+                        "unit_codes": (offer.attrs or {}).get("units") or [],
+                        "price_quality": offer.price_quality,
+                    },
+                    "note": (
+                        f"tầng {tier['floor_from']}-{tier['floor_to']}: "
+                        f"{lo:,}–{hi:,} VND ({pmin:,}–{pmax:,} VND/m², +{tier['pct']:g}% theo view)"
+                    ),
+                    "quality": offer.price_quality,
+                    "trust_level": "estimate",
+                }
+            )
+    return fe
+
+
+def pricing_summary(result: dict) -> dict:
+    """Meta summary for the pricing leg (counterpart to affordability_summary)."""
+    return {
+        "mode": "pricing",
+        "has_approx": result["has_approx"],
+        "row_count": result["row_count"],
+        "matched_subjects": result["matched_subjects"],
+    }

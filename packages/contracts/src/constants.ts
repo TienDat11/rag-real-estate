@@ -15,6 +15,7 @@ export const API_SSE_EVENTS = {
   SOURCES: "sources",
   FACTS: "facts",
   TOKEN: "token",
+  PROGRESS: "progress",
   DONE: "done",
   ERROR: "error",
 } as const satisfies Record<string, SseEventName>;
@@ -25,6 +26,7 @@ export const SSE_EVENT_NAMES: readonly SseEventName[] = [
   API_SSE_EVENTS.SOURCES,
   API_SSE_EVENTS.FACTS,
   API_SSE_EVENTS.TOKEN,
+  API_SSE_EVENTS.PROGRESS,
   API_SSE_EVENTS.DONE,
   API_SSE_EVENTS.ERROR,
 ];
